@@ -1,8 +1,11 @@
-DirectoryIndex dist/index.html
+DirectoryIndex index.html dist/index.html
 RewriteEngine On
 RewriteBase /resources/site/
 
-# Built app and its hashed assets
+# /resources/site/dist/ is a real directory. Options -Indexes plus the
+# DirectoryIndex of dist/index.html (meant for /resources/site/) looks for
+# dist/dist/index.html and Apache returns 403. Serve the built index instead.
+RewriteRule ^dist/?$ dist/index.html [L]
 RewriteRule ^dist/ - [L]
 
 # /resources/site and /resources/site/index.html are the Vite *source* shell
