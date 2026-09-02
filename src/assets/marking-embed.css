@@ -1,0 +1,23 @@
+/* Injected into Base Commander iframes on the Mission Marking tab.
+   Restates Base Commander's blue in this page's navy / --line / --blue palette. */
+#mashpia-navbar,#sidebar{display:none!important}
+html,body{height:auto!important;overflow:hidden!important}
+#dashboard-body{height:auto!important;min-height:0!important}
+#dashboard-content{padding:10px 14px!important}
+.Label>.row:not(.Task),.Grid thead th,.modal-header{background:#14265C!important;border-bottom-color:#14265C!important}
+.Grid tr.Grid-row:first-child td{border-color:#14265C!important}
+.Grid th,.Grid td{border-color:#D3DAE8!important}
+.th-callout.alert-primary{background-color:#EDF0F6!important;border-color:#D3DAE8!important}
+.th-callout.alert-primary i,.th-callout.alert-primary h4{color:#14265C!important}
+.btn-primary{background-color:#14265C!important;border-color:#14265C!important}
+.btn-primary:hover,.btn-primary:focus,.btn-primary:active{background-color:#1B4FD8!important;border-color:#1B4FD8!important}
+.form-control:focus,.mark-cell.waiting>.form-control{border-color:#1B4FD8!important}
+.mark-cell-waiting,.mark-cell-spinner{color:#1B4FD8!important}
+.ReactTable .rt-th.rt-resizable-header:not(.-cursor-pointer){color:#14265C!important}
+.ReactTable .selected-row{background-color:#EDF0F6!important}
+.nav-tabs{border-color:#14265C!important}
+.nav-tabs a.active.nav-link{background-color:#14265C!important;border-color:#14265C!important;color:#fff!important}
+.nav-tabs .nav-link:not(.disabled):not(.active):hover{color:#1B4FD8!important}
+.tab-content{border-color:#14265C!important}
+p.title{border-bottom-color:#14265C!important}
+a{color:#1B4FD8}

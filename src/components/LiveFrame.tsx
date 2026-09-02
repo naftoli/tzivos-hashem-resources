@@ -10,6 +10,11 @@ interface LiveFrameProps {
   openHref?: string;
   /** Extra CSS text injected into the iframe's own <head> once it loads (same-origin only). */
   injectCss?: string;
+  /**
+   * `calendar` matches the legacy calendar fit(): measure body/#root only, never
+   * `documentElement` (html fills the frame, so its scrollHeight cannot shrink).
+   */
+  fitMode?: 'default' | 'calendar';
   className?: string;
 }
 
@@ -18,7 +23,7 @@ interface LiveFrameProps {
  * iframe that grows to fit its content (so it never scrolls inside its own box) and
  * shows a "still loading, open in a new tab" fallback after 8s.
  */
-export function LiveFrame({ src, title, label, openHref, injectCss, className }: LiveFrameProps) {
+export function LiveFrame({ src, title, label, openHref, injectCss, fitMode = 'default', className }: LiveFrameProps) {
   const frameRef = useRef<HTMLIFrameElement>(null);
   const [loaded, setLoaded] = useState(false);
   const [slow, setSlow] = useState(false);
@@ -44,11 +49,14 @@ export function LiveFrame({ src, title, label, openHref, injectCss, className }:
         const doc = frame!.contentDocument;
         if (!doc?.body) return;
         const root = doc.getElementById('root');
-        const h = Math.max(
-          doc.body.scrollHeight,
-          doc.documentElement?.scrollHeight ?? 0,
-          root?.scrollHeight ?? 0,
-        );
+        const h =
+          fitMode === 'calendar'
+            ? Math.max(doc.body.scrollHeight, root?.scrollHeight ?? 0)
+            : Math.max(
+                doc.body.scrollHeight,
+                doc.documentElement?.scrollHeight ?? 0,
+                root?.scrollHeight ?? 0,
+              );
         if (h > 80) setHeight(h);
       } catch {
         // cross-origin (shouldn't happen here — both embeds are same-origin) — leave height alone
@@ -80,7 +88,7 @@ export function LiveFrame({ src, title, label, openHref, injectCss, className }:
       ro?.disconnect();
       win.removeEventListener('resize', fit);
     };
-  }, [loaded, injectCss]);
+  }, [loaded, injectCss, fitMode]);
 
   return (
     <div className={`wrap ${className ?? ''}`}>

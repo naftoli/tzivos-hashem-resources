@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { LiveFrame } from '@/components/LiveFrame';
 import { Crumb } from '@/components/Crumb';
+import markingEmbedCss from '@/assets/marking-embed.css?raw';
 
 const TOOLS = [
   {
@@ -40,35 +41,9 @@ const TOOLS = [
   },
 ] as const;
 
-// Base Commander's blue (#3e6dc4 and friends) restated in the palette this page
-// uses: navy surfaces, --line borders, --blue for accents.
-const BASE_COMMANDER_CSS = `
-#mashpia-navbar,#sidebar{display:none!important}
-html,body{height:auto!important;overflow:hidden!important}
-#dashboard-body{height:auto!important;min-height:0!important}
-#dashboard-content{padding:10px 14px!important}
-.Label>.row:not(.Task),.Grid thead th,.modal-header{background:#14265C!important;border-bottom-color:#14265C!important}
-.Grid tr.Grid-row:first-child td{border-color:#14265C!important}
-.Grid th,.Grid td{border-color:#D3DAE8!important}
-.th-callout.alert-primary{background-color:#EDF0F6!important;border-color:#D3DAE8!important}
-.th-callout.alert-primary i,.th-callout.alert-primary h4{color:#14265C!important}
-.btn-primary{background-color:#14265C!important;border-color:#14265C!important}
-.btn-primary:hover,.btn-primary:focus,.btn-primary:active{background-color:#1B4FD8!important;border-color:#1B4FD8!important}
-.form-control:focus,.mark-cell.waiting>.form-control{border-color:#1B4FD8!important}
-.mark-cell-waiting,.mark-cell-spinner{color:#1B4FD8!important}
-.ReactTable .rt-th.rt-resizable-header:not(.-cursor-pointer){color:#14265C!important}
-.ReactTable .selected-row{background-color:#EDF0F6!important}
-.nav-tabs{border-color:#14265C!important}
-.nav-tabs a.active.nav-link{background-color:#14265C!important;border-color:#14265C!important;color:#fff!important}
-.nav-tabs .nav-link:not(.disabled):not(.active):hover{color:#1B4FD8!important}
-.tab-content{border-color:#14265C!important}
-p.title{border-bottom-color:#14265C!important}
-a{color:#1B4FD8}
-`;
-
 export function MarkingPage() {
   // A teacher who opens this tab came to mark, so default straight to Mark.
-  const [active, setActive] = useState(TOOLS[1]);
+  const [active, setActive] = useState<(typeof TOOLS)[number]>(TOOLS[1]);
 
   return (
     <section className="page on" data-page="marking">
@@ -121,7 +96,7 @@ export function MarkingPage() {
         title={active.name}
         label={`Live · Base Commander · ${active.name}`}
         openHref={active.src}
-        injectCss={BASE_COMMANDER_CSS}
+        injectCss={markingEmbedCss}
       />
     </section>
   );

@@ -24,5 +24,11 @@ export type PageBundle = Record<string, string>;
 
 export interface TzhUser {
   success: boolean;
+  /** Display name, already prefixed with title where checkAuth.php determined one belongs. */
+  name?: string;
+  /** Human-readable role label, e.g. "Base Commander", "Teacher", "Headquarters". */
+  role?: string;
+  /** 1-2 letter avatar initials. */
+  initials?: string;
   [key: string]: unknown;
 }

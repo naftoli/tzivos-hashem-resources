@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { phpUrl } from '@/lib/phpUrl';
 import type { TzhUser } from '@/types';
 
 const UserContext = createContext<TzhUser | null>(null);
@@ -17,7 +18,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    fetch('checkAuth.php', { credentials: 'include' })
+    fetch(phpUrl('checkAuth.php'), { credentials: 'include' })
       .then((response) => {
         if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
         return response.json();

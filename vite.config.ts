@@ -23,6 +23,16 @@ export default defineConfig(() => {
     server: {
       port: 3001,
       host: '0.0.0.0',
+      // `vite dev` has no PHP interpreter of its own, so anything hitting a .php
+      // endpoint (checkAuth.php, etc.) or the /new mission tools needs forwarding
+      // to the real backend — same "localhost" convention base-commander's
+      // LEGACY_URL uses in dev. Without this, those requests fall through to
+      // Vite's SPA fallback (index.html), which breaks AuthGate silently.
+      proxy: {
+        '^/resources/[^/]+\\.php$': { target: 'http://localhost', changeOrigin: true },
+        '/new': { target: 'http://localhost', changeOrigin: true },
+        '/mobile': { target: 'http://localhost', changeOrigin: true },
+      },
     },
   };
 });
