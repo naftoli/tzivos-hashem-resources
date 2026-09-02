@@ -1,5 +1,5 @@
 /* ---- block 0 (50755 chars) ---- */
-:root{--logo:url('/resources/assets/img/f90a774f9a601cdd.svg')}
+:root{--logo:url('./assets/f90a774f9a601cdd.svg')}
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -615,7 +615,7 @@ h2.heb-h2{font-family:"Frank Ruhl Libre","Times New Roman",serif;direction:rtl;t
 .m2-emb .emb-img{width:38px;height:38px;object-fit:contain;display:block}
 .secemb{display:inline-block;vertical-align:-8px;margin-left:10px}.secemb .emb-img{width:40px;height:46px}
 #schtitle .schemb{width:26px;height:30px;vertical-align:-6px;margin-right:8px}
-.m2ck{width:38px;height:38px;background:url(/resources/assets/img/5ada48879bc7ad25.png) center/contain no-repeat}
+.m2ck{width:38px;height:38px;background:url(./assets/5ada48879bc7ad25.png) center/contain no-repeat}
 .tocpanel{margin:14px 0 6px;border:1px solid #dfe4ee;border-radius:12px;background:#fff;padding:12px 16px}
 .tocpanel .tp-h{font-family:"Saira Condensed","Roboto Condensed",system-ui;letter-spacing:.1em;text-transform:uppercase;font-size:12.5px;color:var(--muted);margin-bottom:8px}
 .tocpanel .tp-r{display:block;padding:7px 0;border-top:1px dashed #e7ebf4;line-height:1.5}
