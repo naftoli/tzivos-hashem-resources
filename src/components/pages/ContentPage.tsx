@@ -56,23 +56,30 @@ export function ContentPage({ pageId }: ContentPageProps) {
 
   useLayoutEffect(() => {
     const container = containerRef.current;
-    setPromoPortalNode(null);
-    setChitasPortalNode(null);
     if (!container) return;
 
+    // Assign HTML here, not via dangerouslySetInnerHTML. A React-managed
+    // innerHTML host wipes the live-region node on the next render, so the
+    // AJAX result painted into a detached portal while the page kept showing
+    // the static "Loading…" placeholders.
+    container.innerHTML = html;
     hydrateImages(container);
     applyWeekState(container);
     applyAltCrumb(container, pageId, entry?.branch ?? pageId);
 
-    if (pageId === 'promotions') {
-      setPromoPortalNode(swapLiveRegion(container, ['#promoMonth', 'table.tbl']));
-    }
-    if (pageId === 'chitas') {
-      setChitasPortalNode(swapLiveRegion(container, ['#chFeed']));
-    }
+    const promo = pageId === 'promotions' ? swapLiveRegion(container, ['#promoMonth', 'table.tbl']) : null;
+    const chitas = pageId === 'chitas' ? swapLiveRegion(container, ['#chFeed']) : null;
+    setPromoPortalNode(promo);
+    setChitasPortalNode(chitas);
 
     const h = container.querySelector('h1,h2');
     document.title = `Tzivos Hashem · ${h ? (h.textContent ?? '').trim() : 'Resources'}`;
+
+    return () => {
+      setPromoPortalNode(null);
+      setChitasPortalNode(null);
+      container.innerHTML = '';
+    };
   }, [html, pageId, entry]);
 
   function handleClick(event: MouseEvent<HTMLDivElement>) {
@@ -108,8 +115,7 @@ export function ContentPage({ pageId }: ContentPageProps) {
 
   return (
     <>
-      {/* eslint-disable-next-line react/no-danger */}
-      <div ref={containerRef} onClick={handleClick} dangerouslySetInnerHTML={{ __html: html }} />
+      <div ref={containerRef} onClick={handleClick} />
       {promoPortalNode && createPortal(<PromotionsTable />, promoPortalNode)}
       {chitasPortalNode && createPortal(<ChitasFeed />, chitasPortalNode)}
     </>
