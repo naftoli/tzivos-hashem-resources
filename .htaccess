@@ -1,0 +1,11 @@
+DirectoryIndex dist/index.html
+RewriteEngine On
+RewriteBase /resources/site/
+
+# Built app and its hashed assets
+RewriteRule ^dist/ - [L]
+
+# /resources/site and /resources/site/index.html are the Vite *source* shell
+# (it loads /src/main.tsx, which Apache cannot compile). Serve the build.
+RewriteRule ^$ dist/index.html [L]
+RewriteRule ^index\.html$ dist/index.html [L]

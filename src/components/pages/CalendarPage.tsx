@@ -2,7 +2,7 @@ import { LiveFrame } from '@/components/LiveFrame';
 import { Crumb } from '@/components/Crumb';
 import calendarEmbedCss from '@/assets/calendar-embed.css?raw';
 
-const CAL_SRC = 'calendar/dist/';
+const CAL_SRC = '/resources/calendar/dist/';
 
 export function CalendarPage() {
   return (

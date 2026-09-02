@@ -7,9 +7,11 @@ import { defineConfig } from 'vite';
 // this rewrite exists specifically to stop re-downloading ~200MB of images and
 // content on every visit, so real hashed asset files + normal browser caching
 // are the point, not a single inlined bundle.
-export default defineConfig(() => {
+export default defineConfig(({ command }) => {
   return {
-    base: '/resources/',
+    // Production is served from mashpia.com/public/resources/site/dist/.
+    // Dev keeps `/` so `vite` still opens at localhost:3001/.
+    base: command === 'build' ? '/resources/site/dist/' : '/',
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
