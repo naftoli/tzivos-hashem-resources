@@ -1,5 +1,5 @@
 import { useEffect, type ReactNode } from 'react';
-import { HashRouter, Navigate, Route, Routes, useParams } from 'react-router-dom';
+import { HashRouter, Navigate, Route, Routes, useParams, useSearchParams } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { ScheduleModalProvider } from '@/components/ScheduleModal';
 import { LightboxProvider } from '@/components/Lightbox';
@@ -34,6 +34,7 @@ function resolveBranch(pageId: string): BranchId {
 /** Resolves the current `:pageId` param to the right page component + chrome. */
 function AppShell() {
   const { pageId = 'home' } = useParams();
+  const [searchParams] = useSearchParams();
 
   // Port of legacy `show()`'s `window.scrollTo({top:0,behavior:'instant'})` —
   // runs on every route change, for every page type (content pages and the
@@ -46,7 +47,7 @@ function AppShell() {
   if (pageId === 'marking') {
     content = <MarkingPage />;
   } else if (pageId === 'calendar') {
-    content = <CalendarPage />;
+    content = <CalendarPage initialView={searchParams.get('view') ?? undefined} />;
   } else if (pageRegistry[pageId]) {
     content = <ContentPage pageId={pageId} />;
   } else {

@@ -4,7 +4,12 @@ import calendarEmbedCss from '@/assets/calendar-embed.css?raw';
 
 const CAL_SRC = '/resources/calendar/dist/';
 
-export function CalendarPage() {
+interface CalendarPageProps {
+  initialView?: string;
+}
+
+export function CalendarPage({ initialView }: CalendarPageProps) {
+  const src = initialView ? `${CAL_SRC}?view=${initialView}` : CAL_SRC;
   return (
     <section className="page on" data-page="calendar">
       <Crumb trail={['Calendar']} />
@@ -18,10 +23,10 @@ export function CalendarPage() {
         </div>
       </div>
       <LiveFrame
-        src={CAL_SRC}
+        src={src}
         title="Tzivos Hashem Calendar 5787"
         label="Tzivos Hashem Calendar 5787"
-        openHref={CAL_SRC}
+        openHref={src}
         injectCss={calendarEmbedCss}
         fitMode="calendar"
       />
