@@ -34,6 +34,16 @@ export default defineConfig(({ command }) => {
         '^/resources/[^/]+\\.php$': { target: 'http://localhost', changeOrigin: true },
         '/new': { target: 'http://localhost', changeOrigin: true },
         '/mobile': { target: 'http://localhost', changeOrigin: true },
+        // Images (and eventually pdfs/audio/video) live under /resources/assets/ —
+        // in production Apache rewrites that to site/public/assets/, but there's no
+        // such rewrite here, and the path doesn't match this project's own
+        // public/assets/ URL anyway. Load the real files from production instead of
+        // requiring/committing a ~200MB local copy.
+        '^/resources/assets/': { target: 'https://tzivoshashem.com', changeOrigin: true },
+        // The calendar is its own submodule/build, not part of this Vite project, so
+        // it isn't served here at all — without this it falls through to this app's
+        // own SPA index.html and loads itself recursively inside its own iframe.
+        '^/resources/calendar/': { target: 'https://tzivoshashem.com', changeOrigin: true },
       },
     },
   };
