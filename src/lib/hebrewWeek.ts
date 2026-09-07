@@ -1,6 +1,7 @@
 import DATETBL from '@/data/static/DATETBL.json';
 import DATEHD from '@/data/static/DATEHD.json';
 import DATEMO from '@/data/static/DATEMO.json';
+import DATEYT from '@/data/static/DATEYT.json';
 import MOHEB from '@/data/static/MOHEB.json';
 
 /**
@@ -29,10 +30,38 @@ export interface DateTblEntry {
   hdheb: string;
 }
 
+/** A `DATEYT` entry: an upcoming Yom Tov that the "this week" widgets point at. */
+export interface DateYtEntry {
+  /** English Yom Tov name, e.g. "Sukkos" (matches the `YTHEB` keys below). */
+  nm: string;
+  /** The page id this Yom Tov's content lives under, e.g. "dytSukkos". */
+  sl: string;
+}
+
 const DATETBL_TYPED = DATETBL as Record<string, DateTblEntry>;
 const DATEHD_TYPED = DATEHD as Record<string, string>;
 const DATEMO_TYPED = DATEMO as Record<string, string>;
+const DATEYT_TYPED = DATEYT as Record<string, DateYtEntry>;
 const MOHEB_TYPED = MOHEB as Record<string, string>;
+
+/**
+ * Hebrew display names for each Yom Tov `nm`, mirroring the monolith's inline
+ * `YTHEB` map in `setWeek()`. Used only for the home hero widget's Hebrew line.
+ */
+const YTHEB: Record<string, string> = {
+  'Rosh Hashanah': 'רֹאשׁ הַשָּׁנָה',
+  'Yom Kippur': 'יוֹם כִּפּוּר',
+  Sukkos: 'סֻכּוֹת',
+  'Shemini Atzeres & Simchas Torah': 'שְׁמִינִי עֲצֶרֶת',
+  Chanukah: 'חֲנֻכָּה',
+  'Tu B’Shvat': 'ט״ו בִּשְׁבָט',
+  Purim: 'פּוּרִים',
+  Pesach: 'פֶּסַח',
+  'Pesach Sheni': 'פֶּסַח שֵׁנִי',
+  'Lag B’Omer': 'ל״ג בָּעוֹמֶר',
+  Shavuos: 'שָׁבוּעוֹת',
+  '15 Av': 'ט״ו בְּאָב',
+};
 
 function pad(n: number): string {
   return n < 10 ? `0${n}` : `${n}`;
@@ -52,6 +81,16 @@ export function comingShabbosKey(): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
+/** An upcoming Yom Tov (today or within the next 7 days), resolved for display. */
+export interface UpcomingYomTov {
+  /** English Yom Tov name, e.g. "Sukkos". */
+  nm: string;
+  /** Page id for the Yom Tov's content, e.g. "dytSukkos". */
+  sl: string;
+  /** Hebrew display name for the hero widget, e.g. "סֻכּוֹת" (falls back to `nm`). */
+  heb: string;
+}
+
 export interface WeekInfo {
   /** `DATETBL` entry for today, if today is within the table's range. */
   today: DateTblEntry | undefined;
@@ -65,9 +104,34 @@ export interface WeekInfo {
   sl: string;
   /** Today's Hebrew date display string, or '' if unavailable. */
   hdheb: string;
+  /**
+   * The Yom Tov falling today or within the next 7 days, if any. When set, the
+   * monolith's `setWeek()` re-points every "this week" reference (home hero,
+   * Chitas aliyah line, Parsha "now" badge) at the Yom Tov instead of the
+   * coming-Shabbos parsha — see `applyWeekState`. The topbar strip is left on
+   * the raw parsha (`pe`), matching the legacy markup that `setWeek()` never
+   * touched.
+   */
+  yomTov: UpcomingYomTov | null;
 }
 
-/** Mirrors legacy `setWeek()`'s `today`/`wk`/`pe`/`ph`/`sl`/`hdheb` derivation. */
+/**
+ * Mirrors legacy `setWeek()`'s `ytHit` scan: the nearest Yom Tov landing today
+ * or within the next 7 days, or `null`. Same 0..7 inclusive day window and same
+ * `YYYY-MM-DD` keying the monolith used.
+ */
+export function getUpcomingYomTov(): UpcomingYomTov | null {
+  const d = new Date();
+  for (let i = 0; i <= 7; i++) {
+    const key = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const hit = DATEYT_TYPED[key];
+    if (hit) return { nm: hit.nm, sl: hit.sl, heb: YTHEB[hit.nm] ?? hit.nm };
+    d.setDate(d.getDate() + 1);
+  }
+  return null;
+}
+
+/** Mirrors legacy `setWeek()`'s `today`/`wk`/`pe`/`ph`/`sl`/`hdheb`/`ytHit` derivation. */
 export function getWeekInfo(): WeekInfo {
   const today = DATETBL_TYPED[todayKey()];
   const week = DATETBL_TYPED[comingShabbosKey()] ?? today;
@@ -78,6 +142,7 @@ export function getWeekInfo(): WeekInfo {
     ph: week?.ph ?? '',
     sl: week?.sl ?? 'dParsha',
     hdheb: today?.hdheb ?? '',
+    yomTov: getUpcomingYomTov(),
   };
 }
 

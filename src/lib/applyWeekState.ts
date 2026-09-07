@@ -11,17 +11,33 @@ import { getCurrentMonth, getTodayHd, getWeekInfo } from '@/lib/hebrewWeek';
  * Deliberately NOT ported: `hiskWkLabel`/`hiskWkCards`/`ordWkLabel` — grepping
  * the extracted `src/data/pages/*.json` fragments turns up no elements with
  * those ids anywhere, so that part of the legacy function is dead code here.
+ * (This also covers v42's Yom Tov card, which `setWeek()` writes into
+ * `hiskWkCards`: the Yom Tov re-pointing of `pe`/`ph`/`sl` below is ported, but
+ * the card itself has no target element in this app.)
  */
 export function applyWeekState(root: ParentNode): void {
-  const { pe, ph, sl, hdheb } = getWeekInfo();
+  const info = getWeekInfo();
+  const { ph: rawPh, hdheb, yomTov } = info;
+
+  // When a Yom Tov falls today or within the next 7 days, `setWeek()` re-points
+  // every "this week" reference at it: the parsha name/Hebrew/page-id are all
+  // swapped for the Yom Tov's (`ph` blanked, since a Yom Tov has no parsha line).
+  const pe = yomTov ? yomTov.nm : info.pe;
+  const ph = yomTov ? '' : rawPh;
+  const sl = yomTov ? yomTov.sl : info.sl;
 
   // --- home hero widget ---
   const elHeb = root.querySelector<HTMLElement>('#wkHeb');
   const elP = root.querySelector<HTMLElement>('#wkParsha');
   const elDH = root.querySelector<HTMLElement>('#wkDateHeb');
   const elB = root.querySelector<HTMLElement>('#wkBtn');
-  if (ph && elHeb) elHeb.textContent = `פָּרָשַׁת ${ph}`;
-  if (pe && elP) elP.textContent = `Parshas ${pe}`;
+  if (elHeb) {
+    // Yom Tov → its Hebrew name; otherwise the parsha line, left untouched when
+    // there's no Hebrew parsha to show (mirrors the legacy ternary exactly).
+    if (yomTov) elHeb.textContent = yomTov.heb || pe;
+    else if (ph) elHeb.textContent = `פָּרָשַׁת ${ph}`;
+  }
+  if (pe && elP) elP.textContent = yomTov ? pe : `Parshas ${pe}`;
   if (hdheb && elDH) elDH.textContent = hdheb;
   if (sl && elP) elP.setAttribute('data-go', sl);
   if (sl && elB) elB.setAttribute('data-go', sl);
