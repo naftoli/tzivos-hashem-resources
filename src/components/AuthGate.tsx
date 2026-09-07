@@ -34,6 +34,14 @@ export function AuthGate({ children }: { children: ReactNode }) {
       })
       .catch((error) => {
         console.error('Error:', error);
+        // In dev, a broken/absent checkAuth.php (no local PHP server) shouldn't
+        // block the whole app behind a permanent blank screen — let the
+        // developer in with a stand-in user instead of gating on auth.
+        if (import.meta.env.DEV) {
+          console.warn('checkAuth.php unreachable — skipping auth for local dev.');
+          setUser({ success: true, name: 'Dev User', role: 'Headquarters', initials: 'DU' });
+          setReady(true);
+        }
       });
   }, []);
 
