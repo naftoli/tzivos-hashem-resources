@@ -203,6 +203,8 @@ bdi{unicode-bidi:isolate}
 /* ---- sections ---------------------------------------------------------- */
 .sec{padding:52px 0}
 .sec.alt{background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+/* Shown only while a lazy branch chunk (Date/Campaign) is still fetching. */
+.loading-note{color:var(--muted);text-align:center;font-size:15px;padding:40px 0}
 .sec-h{margin-bottom:26px;max-width:760px}
 .sec-h .eyebrow{color:var(--red)}
 .sec-h h2{font-family:"Poppins","Segoe UI",system-ui,sans-serif;font-weight:400;font-size:clamp(25px,3.2vw,34px);margin:8px 0 8px}

@@ -1,7 +1,8 @@
-import { useLayoutEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { pageRegistry, altCrumbBranch } from '@/data/pageRegistry';
+import { altCrumbBranch, hasPage, pageBranch } from '@/data/pageMeta';
+import { loadPageHtml, peekPageHtml } from '@/data/pageBodies';
 import { applyWeekState } from '@/lib/applyWeekState';
 import { hydrateImages } from '@/lib/hydrateImages';
 import { dispatchContentClick } from '@/lib/dispatchContentClick';
@@ -48,15 +49,38 @@ export function ContentPage({ pageId }: ContentPageProps) {
   const navigate = useNavigate();
   const { openSched, openOlder } = useScheduleModal();
   const { openLightbox } = useLightbox();
-  const entry = pageRegistry[pageId];
-  const html = useMemo(() => entry?.html ?? '', [entry]);
+  const branch = pageBranch[pageId];
   const containerRef = useRef<HTMLDivElement>(null);
+  // null only while a lazy branch chunk is still fetching; the fast path below
+  // seeds it synchronously for static/already-loaded branches so those never
+  // flash a loading state.
+  const [html, setHtml] = useState<string | null>(() => peekPageHtml(pageId));
   const [promoPortalNode, setPromoPortalNode] = useState<HTMLElement | null>(null);
   const [chitasPortalNode, setChitasPortalNode] = useState<HTMLElement | null>(null);
 
+  // Fetch the page body when the route changes. If its branch is already loaded
+  // (static branch, or a lazy chunk visited earlier this session), take the
+  // synchronous value and skip the loading state entirely; only a genuine
+  // uncached `date`/`campaign` chunk fetch drops to `null` and shows it.
+  useEffect(() => {
+    const ready = peekPageHtml(pageId);
+    if (ready != null) {
+      setHtml(ready);
+      return;
+    }
+    let alive = true;
+    setHtml(null);
+    loadPageHtml(pageId).then((h) => {
+      if (alive) setHtml(h ?? '');
+    });
+    return () => {
+      alive = false;
+    };
+  }, [pageId]);
+
   useLayoutEffect(() => {
     const container = containerRef.current;
-    if (!container) return;
+    if (!container || html == null) return;
 
     // Assign HTML here, not via dangerouslySetInnerHTML. A React-managed
     // innerHTML host wipes the live-region node on the next render, so the
@@ -65,7 +89,7 @@ export function ContentPage({ pageId }: ContentPageProps) {
     container.innerHTML = html;
     hydrateImages(container);
     applyWeekState(container);
-    applyAltCrumb(container, pageId, entry?.branch ?? pageId);
+    applyAltCrumb(container, pageId, branch ?? pageId);
 
     const promo = pageId === 'promotions' ? swapLiveRegion(container, ['#promoMonth', 'table.tbl']) : null;
     const chitas = pageId === 'chitas' ? swapLiveRegion(container, ['#chFeed']) : null;
@@ -80,7 +104,7 @@ export function ContentPage({ pageId }: ContentPageProps) {
       setChitasPortalNode(null);
       container.innerHTML = '';
     };
-  }, [html, pageId, entry]);
+  }, [html, pageId, branch]);
 
   function handleClick(event: MouseEvent<HTMLDivElement>) {
     if (!containerRef.current) return;
@@ -90,13 +114,13 @@ export function ContentPage({ pageId }: ContentPageProps) {
       openLightbox,
       navigateBack: (fallback) => navigateBack(navigate, fallback),
       go: (id) => {
-        setCtxFrom(entry?.branch ?? pageId);
+        setCtxFrom(branch ?? pageId);
         navigate(`/${id}`);
       },
     });
   }
 
-  if (!entry) {
+  if (!hasPage(pageId)) {
     return (
       <section className="page on" data-page={pageId}>
         <div className="sec">
@@ -115,6 +139,19 @@ export function ContentPage({ pageId }: ContentPageProps) {
 
   return (
     <>
+      {/* Sibling, never a child of the innerHTML-managed container: shown only
+          while a lazy branch chunk is still fetching (see the load effect). */}
+      {html == null && (
+        <section className="page on">
+          <div className="sec">
+            <div className="wrap">
+              <p className="loading-note" role="status" aria-live="polite">
+                Loading…
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
       <div ref={containerRef} onClick={handleClick} />
       {promoPortalNode && createPortal(<PromotionsTable />, promoPortalNode)}
       {chitasPortalNode && createPortal(<ChitasFeed />, chitasPortalNode)}

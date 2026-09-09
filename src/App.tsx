@@ -6,7 +6,7 @@ import { LightboxProvider } from '@/components/Lightbox';
 import { ContentPage } from '@/components/pages/ContentPage';
 import { CalendarPage } from '@/components/pages/CalendarPage';
 import { MarkingPage } from '@/components/pages/MarkingPage';
-import { pageRegistry, altCrumbBranch } from '@/data/pageRegistry';
+import { altCrumbBranch, hasPage, pageBranch } from '@/data/pageMeta';
 import { wantedBranch } from '@/lib/navState';
 import branchOf from '@/data/static/branchOf.json';
 import type { BranchId } from '@/types';
@@ -22,7 +22,7 @@ const BRANCH_OF = branchOf as Record<string, string>;
  */
 function resolveBranch(pageId: string): BranchId {
   if (pageId === 'marking' || pageId === 'calendar') return pageId;
-  const fallback = (BRANCH_OF[pageId] || pageRegistry[pageId]?.branch || 'home') as BranchId;
+  const fallback = (BRANCH_OF[pageId] || pageBranch[pageId] || 'home') as BranchId;
   const altBranch = altCrumbBranch[pageId];
   if (altBranch) {
     const want = wantedBranch(fallback);
@@ -48,7 +48,7 @@ function AppShell() {
     content = <MarkingPage />;
   } else if (pageId === 'calendar') {
     content = <CalendarPage initialView={searchParams.get('view') ?? undefined} />;
-  } else if (pageRegistry[pageId]) {
+  } else if (hasPage(pageId)) {
     content = <ContentPage pageId={pageId} />;
   } else {
     return <Navigate to="/home" replace />;

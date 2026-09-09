@@ -4,7 +4,10 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "genmeta": "node scripts/genPageMeta.mjs",
+    "predev": "node scripts/genPageMeta.mjs",
     "dev": "vite",
+    "prebuild": "node scripts/genPageMeta.mjs",
     "build": "vite build",
     "preview": "vite preview",
     "lint": "tsc --noEmit"
