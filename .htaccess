@@ -12,3 +12,12 @@ RewriteRule ^dist/ - [L]
 # (it loads /src/main.tsx, which Apache cannot compile). Serve the build.
 RewriteRule ^$ dist/index.html [L]
 RewriteRule ^index\.html$ dist/index.html [L]
+
+# The page URL is /resources/site/ (the hash is not part of URL resolution), so a
+# relative sichos/<file>.pdf asks for /resources/site/sichos/<file>.pdf. Built
+# copies of public/ live under dist/. Serve that file when it exists. Anything
+# else is left alone, so a missing path is not rewritten to index.html.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond "%{DOCUMENT_ROOT}/resources/site/dist/$1" -f
+RewriteRule ^(.+)$ dist/$1 [L]
