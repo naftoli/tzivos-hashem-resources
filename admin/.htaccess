@@ -1,0 +1,11 @@
+# This folder is the Resources admin (Laravel). It sits inside the Resources site's folder,
+# so block it from being opened through that site: it holds settings, the database and uploads.
+# The admin itself is served only by its own subdomain, whose document root is admin/public
+# (admin/public/.htaccess opens that one folder again).
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+    Order deny,allow
+    Deny from all
+</IfModule>
