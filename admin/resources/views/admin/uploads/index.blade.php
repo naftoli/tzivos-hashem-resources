@@ -1,5 +1,14 @@
 @extends('layouts.admin')
 
+@push('head')
+    <style>
+        .file-drop.is-dragover input[type=file] { border-color: var(--blue); background: #e1f0ff; }
+        .file-drop-hint { color: #7e8299; font-size: 12px; margin: 8px 0 0; }
+        .file-drop-names { margin: 8px 0 0; padding: 0; list-style: none; color: #3f4254; font-size: 12px; }
+        .file-drop-names li { margin: 2px 0; word-break: break-all; }
+    </style>
+@endpush
+
 @section('title', 'Uploads | Resources Admin')
 @section('page-title', 'Upload files')
 
@@ -19,7 +28,11 @@
                 @include('admin.uploads._fields', ['upload' => null])
                 <div class="field">
                     <label for="files">Files</label>
-                    <input id="files" type="file" name="files[]" multiple required>
+                    <div class="file-drop">
+                        <input id="files" type="file" name="files[]" multiple required>
+                        <div class="file-drop-hint">or drag files here, or paste</div>
+                        <ul class="file-drop-names" hidden></ul>
+                    </div>
                 </div>
                 <button type="submit" class="btn">Upload</button>
             </form>
@@ -78,3 +91,113 @@
         </div>
     </div>
 @endsection
+
+@push('scripts')
+<script>
+(function () {
+    function fileKey(f) { return f.name + '\0' + f.size + '\0' + f.lastModified; }
+
+    function setFiles(input, incoming, append) {
+        var dt = new DataTransfer();
+        var seen = {};
+        function add(f) {
+            var k = fileKey(f);
+            if (seen[k]) return;
+            seen[k] = true;
+            dt.items.add(f);
+        }
+        if (append) Array.prototype.forEach.call(input.files, add);
+        Array.prototype.forEach.call(incoming, add);
+        input.files = dt.files;
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    function isFileDrag(e) {
+        var types = e.dataTransfer && e.dataTransfer.types;
+        if (!types) return false;
+        if (typeof types.contains === 'function') return types.contains('Files');
+        return Array.prototype.indexOf.call(types, 'Files') !== -1;
+    }
+
+    function renderNames(box, input) {
+        var list = box.querySelector('.file-drop-names');
+        if (!list) return;
+        list.innerHTML = '';
+        if (!input.files.length) { list.hidden = true; return; }
+        Array.prototype.forEach.call(input.files, function (f) {
+            var li = document.createElement('li');
+            li.textContent = f.name;
+            list.appendChild(li);
+        });
+        list.hidden = false;
+    }
+
+    function enhance(input) {
+        var box = input.closest ? input.closest('.file-drop') : null;
+        if (!box) {
+            box = document.createElement('div');
+            box.className = 'file-drop';
+            input.parentNode.insertBefore(box, input);
+            box.appendChild(input);
+        }
+        if (!box.querySelector('.file-drop-hint')) {
+            var hint = document.createElement('div');
+            hint.className = 'file-drop-hint';
+            hint.textContent = 'or drag files here, or paste';
+            box.appendChild(hint);
+        }
+        if (!box.querySelector('.file-drop-names')) {
+            var names = document.createElement('ul');
+            names.className = 'file-drop-names';
+            names.hidden = true;
+            box.appendChild(names);
+        }
+        var depth = 0;
+        box.addEventListener('dragenter', function (e) {
+            if (!isFileDrag(e)) return;
+            e.preventDefault();
+            e.stopPropagation();
+            depth++;
+            box.classList.add('is-dragover');
+        });
+        box.addEventListener('dragover', function (e) {
+            if (!isFileDrag(e)) return;
+            e.preventDefault();
+            e.stopPropagation();
+            e.dataTransfer.dropEffect = 'copy';
+            box.classList.add('is-dragover');
+        });
+        box.addEventListener('dragleave', function (e) {
+            e.preventDefault();
+            depth = Math.max(0, depth - 1);
+            if (!depth) box.classList.remove('is-dragover');
+        });
+        box.addEventListener('drop', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            depth = 0;
+            box.classList.remove('is-dragover');
+            if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
+                setFiles(input, e.dataTransfer.files, true);
+            }
+        });
+        input.addEventListener('change', function () { renderNames(box, input); });
+        renderNames(box, input);
+    }
+
+    Array.prototype.forEach.call(document.querySelectorAll('input[type=file]'), enhance);
+
+    document.addEventListener('dragover', function (e) { if (isFileDrag(e)) e.preventDefault(); });
+    document.addEventListener('drop', function (e) { if (isFileDrag(e)) e.preventDefault(); });
+
+    document.addEventListener('paste', function (e) {
+        var files = e.clipboardData && e.clipboardData.files;
+        if (!files || !files.length) return;
+        var input = document.querySelector('input[type=file]');
+        if (!input) return;
+        e.preventDefault();
+        setFiles(input, files, true);
+    });
+})();
+</script>
+@endpush
