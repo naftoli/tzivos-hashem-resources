@@ -7,11 +7,12 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use RuntimeException;
 
-#[Fillable(['name', 'email', 'password', 'role'])]
+#[Fillable(['name', 'email', 'password', 'role', 'mashpia_role', 'role_locked'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -105,6 +106,16 @@ class User extends Authenticatable
         return in_array($this->role, self::UPLOADERS, true);
     }
 
+    public function isLastHqAdmin(): bool
+    {
+        return $this->role === 'hq_admin' && static::where('role', 'hq_admin')->count() <= 1;
+    }
+
+    public function accessRequests(): HasMany
+    {
+        return $this->hasMany(AdminAccessRequest::class);
+    }
+
     /**
      * Get the attributes that should be cast.
      *
@@ -115,6 +126,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'role_locked' => 'boolean',
         ];
     }
 }

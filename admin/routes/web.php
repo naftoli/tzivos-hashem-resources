@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminAccessRequestController;
+use App\Http\Controllers\Admin\MashpiaRoleMapController;
 use App\Http\Controllers\Admin\PageController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SiteController;
@@ -26,10 +28,19 @@ Route::middleware('auth')->group(function () {
     Route::view('/dashboard', 'dashboard')->name('dashboard');
     Route::get('/account', [\App\Http\Controllers\AccountController::class, 'show'])->name('account');
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
+    Route::post('/account/request-admin', [AdminAccessRequestController::class, 'store'])->name('account.request-admin');
 
     Route::middleware('hq')->group(function () {
         Route::get('/admin/roles', [RoleController::class, 'index'])->name('admin.roles');
         Route::put('/admin/roles/{user}', [RoleController::class, 'update'])->name('admin.roles.update');
+        Route::post('/admin/roles/{user}/automatic', [RoleController::class, 'reset'])->name('admin.roles.reset');
+        Route::get('/admin/mashpia-roles', [MashpiaRoleMapController::class, 'index'])->name('admin.mashpia-roles');
+        Route::post('/admin/mashpia-roles', [MashpiaRoleMapController::class, 'store'])->name('admin.mashpia-roles.store');
+        Route::put('/admin/mashpia-roles/{map}', [MashpiaRoleMapController::class, 'update'])->name('admin.mashpia-roles.update');
+        Route::delete('/admin/mashpia-roles/{map}', [MashpiaRoleMapController::class, 'destroy'])->name('admin.mashpia-roles.destroy');
+        Route::get('/admin/admin-requests', [AdminAccessRequestController::class, 'index'])->name('admin.admin-requests');
+        Route::post('/admin/admin-requests/{accessRequest}/approve', [AdminAccessRequestController::class, 'approve'])->name('admin.admin-requests.approve');
+        Route::post('/admin/admin-requests/{accessRequest}/decline', [AdminAccessRequestController::class, 'decline'])->name('admin.admin-requests.decline');
         Route::get('/admin/sites', [SiteController::class, 'index'])->name('admin.sites');
         Route::post('/admin/sites', [SiteController::class, 'store'])->name('admin.sites.store');
         Route::get('/admin/sites/{site}/edit', [SiteController::class, 'edit'])->name('admin.sites.edit');

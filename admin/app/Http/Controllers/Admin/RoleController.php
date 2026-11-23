@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\MashpiaRoleMapper;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -26,13 +27,41 @@ class RoleController extends Controller
         if ($user->isOwner() && $data['role'] !== 'hq_admin') {
             return back()->withErrors(['role' => 'Nothing was changed: ' . User::ownerMessage($user->email)]);
         }
-        if ($user->is($request->user()) && $data['role'] !== 'hq_admin') {
-            return back()->withErrors(['role' => "Nothing was changed: you can't take HQ admin away from your own account."]);
+        if ($user->is($request->user())) {
+            return back()->withErrors(['role' => "Nothing was changed: you can't change your own level. Ask another HQ admin."]);
+        }
+        if ($user->role === 'hq_admin' && $data['role'] !== 'hq_admin' && $user->isLastHqAdmin()) {
+            return back()->withErrors(['role' => 'Nothing was changed: there must always be at least one HQ admin.']);
         }
 
-        $user->update(['role' => $data['role']]);
+        $user->update(['role' => $data['role'], 'role_locked' => true]);
 
         return redirect()->route('admin.roles')
-            ->with('status', "{$user->email} is now " . User::roleLabel($data['role']) . '.');
+            ->with('status', "{$user->email} is now " . User::roleLabel($data['role']) . ' (set by hand, so Mashpia login will not change it).');
+    }
+
+    /** Clear the "set by hand" flag and use the Mashpia role again. */
+    public function reset(Request $request, User $user, MashpiaRoleMapper $mapper)
+    {
+        if ($user->isOwner()) {
+            return back()->withErrors(['role' => 'Nothing was changed: ' . User::ownerMessage($user->email)]);
+        }
+        if ($user->is($request->user())) {
+            return back()->withErrors(['role' => "Nothing was changed: you can't change your own level. Ask another HQ admin."]);
+        }
+        if (! $user->mashpia_role) {
+            return back()->withErrors(['role' => 'Nothing was changed: this person has not signed in with a Mashpia role yet.']);
+        }
+
+        $wouldBe = $mapper->resolve($user->mashpia_role)['admin_role'];
+        if ($user->role === 'hq_admin' && $wouldBe !== 'hq_admin' && $user->isLastHqAdmin()) {
+            return back()->withErrors(['role' => 'Nothing was changed: there must always be at least one HQ admin.']);
+        }
+
+        $mapper->resetToAutomatic($user);
+        $user->refresh();
+
+        return redirect()->route('admin.roles')
+            ->with('status', "{$user->email} is now " . $user->roleName() . ', from their Mashpia role. Mashpia login will keep it up to date.');
     }
 }

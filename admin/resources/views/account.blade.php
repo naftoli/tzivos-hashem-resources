@@ -4,7 +4,19 @@
 @section('page-title', 'My dashboard')
 
 @section('content')
-    @php $tags = ['hq_admin' => 'blue', 'hq_staff' => 'purple', 'base' => 'grey', 'news' => 'orange']; $tz = config('admin.timezone'); @endphp
+    @php
+        $tags = ['hq_admin' => 'blue', 'hq_staff' => 'purple', 'base' => 'grey', 'news' => 'orange'];
+        $tz = config('admin.timezone');
+        $mapper = app(\App\Services\MashpiaRoleMapper::class);
+        $canAsk = $mapper->canRequestAdmin($user);
+        $pendingMine = $canAsk ? $mapper->pendingRequest($user) : null;
+    @endphp
+    @if (session('status'))
+        <div class="ok">{{ session('status') }}</div>
+    @endif
+    @if ($errors->any())
+        <div class="error">{{ $errors->first() }}</div>
+    @endif
     <div class="card">
         <div class="card-head"><h2>{{ $user->name }}</h2></div>
         <div class="card-body">
@@ -16,6 +28,18 @@
                     <tr><th>Account created</th><td>{{ $user->created_at?->copy()->timezone($tz)->format('M j, Y g:i A') }}</td></tr>
                 </tbody>
             </table>
+            @if ($canAsk)
+                <div style="margin-top:16px">
+                    @if ($pendingMine)
+                        <p style="margin:0">Your request for HQ admin was sent. An HQ admin will review it.</p>
+                    @else
+                        <form method="POST" action="{{ route('account.request-admin') }}" style="margin:0">
+                            @csrf
+                            <button type="submit" class="btn">Request admin access</button>
+                        </form>
+                    @endif
+                </div>
+            @endif
             <form method="POST" action="{{ route('logout') }}" style="margin-top:16px">
                 @csrf
                 <button type="submit" class="btn light">Sign out</button>

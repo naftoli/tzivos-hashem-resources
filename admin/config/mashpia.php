@@ -41,4 +41,30 @@ return [
     // Mock mode: these emails, or any email at these domains, count as "logged in"
     'mock_emails' => array_filter(array_map('trim', explode(',', env('MASHPIA_MOCK_EMAILS', '')))),
     'mock_domains' => array_filter(array_map('trim', explode(',', env('MASHPIA_MOCK_DOMAINS', '')))),
+
+    /*
+    | Starting list of Mashpia roles (the "role" text from checkAuth.php / the handoff note)
+    | and the admin level each one should get. Copied into the database on setup; after that,
+    | HQ admin edits the list on the Mashpia roles screen.
+    |
+    | Only names found in the Resources site / checkAuth sources are listed here.
+    | No Mashpia role is ever mapped to HQ admin (that level is only granted by an existing HQ admin).
+    |
+    | TODO: News site — no Mashpia role name was found for this level.
+    | TODO: HQ admin — never assigned automatically (by design).
+    */
+    'role_map' => [
+        'Teacher' => 'teacher',
+        'Base Commander' => 'base',
+        'Headquarters' => 'hq_staff',
+    ],
+
+    // Mashpia roles that may ask an existing HQ admin for HQ admin access.
+    // Headquarters is the HQ-level role found in the Resources site's checkAuth types.
+    'request_admin_roles' => [
+        'Headquarters',
+    ],
+
+    // Used when Mashpia sends a role that is not in the map (and logged).
+    'unknown_role_level' => 'news',
 ];

@@ -63,7 +63,7 @@ class MashpiaAuthService
     /**
      * Session method: ask check_url, server to server, with the person's Mashpia cookie.
      * check_url answers like the Resources site expects: {"success": true, "name": ..., "role": ..., "email": ...}
-     * Returns ['ok' => bool, 'email' => ?string, 'name' => ?string, 'message' => ?string].
+     * Returns ['ok' => bool, 'email' => ?string, 'name' => ?string, 'role' => ?string, 'message' => ?string].
      */
     public function checkSession(?string $mashpiaCookie): array
     {
@@ -82,7 +82,7 @@ class MashpiaAuthService
         if (! $response->successful() || $response->json('success') !== true) {
             return $this->no('Please sign in to Mashpia first, then come back here.');
         }
-        return $this->person($response->json('email'), $response->json('name'));
+        return $this->person($response->json('email'), $response->json('name'), $response->json('role'));
     }
 
     /**
@@ -109,21 +109,28 @@ class MashpiaAuthService
         if (strlen($nonce) < 16 || ! Cache::add('mashpia-handoff:' . hash('sha256', $nonce), 1, $maxAge + 120)) {
             return $this->no('That sign-in link was already used. Please try again.');
         }
-        return $this->person($data['email'] ?? null, $data['name'] ?? null);
+        return $this->person($data['email'] ?? null, $data['name'] ?? null, $data['role'] ?? null);
     }
 
-    protected function person($email, $name): array
+    protected function person($email, $name, $role = null): array
     {
         $email = strtolower(trim((string) $email));
         if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
             return $this->no('Mashpia did not send an email address for this account.');
         }
         $name = trim(strip_tags((string) $name));
-        return ['ok' => true, 'email' => $email, 'name' => $name !== '' ? mb_substr($name, 0, 120) : null, 'message' => null];
+        $role = trim(strip_tags((string) $role));
+        return [
+            'ok' => true,
+            'email' => $email,
+            'name' => $name !== '' ? mb_substr($name, 0, 120) : null,
+            'role' => $role !== '' ? mb_substr($role, 0, 80) : null,
+            'message' => null,
+        ];
     }
 
     protected function no(string $message): array
     {
-        return ['ok' => false, 'email' => null, 'name' => null, 'message' => $message];
+        return ['ok' => false, 'email' => null, 'name' => null, 'role' => null, 'message' => $message];
     }
 }

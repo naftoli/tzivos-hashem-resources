@@ -116,7 +116,10 @@ exit;
 ```
 
 3. The admin checks the signature, that the note is under 2 minutes old and used only once, then signs
-   the person in by email. New people start at the lowest level; HQ admin sets their level.
+   the person in by email. Their admin level is taken from their Mashpia role (see the Mashpia roles
+   screen). Nobody becomes HQ admin automatically; an existing HQ admin can grant that level, or the
+   person can request it if their Mashpia role allows. A level an HQ admin sets by hand is not overwritten
+   at the next Mashpia login.
 
 ### Alternative: `session`
 

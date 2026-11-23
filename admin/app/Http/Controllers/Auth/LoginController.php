@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\MashpiaAuthService;
+use App\Services\MashpiaRoleMapper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -73,7 +74,7 @@ class LoginController extends Controller
         if (! $result['ok']) {
             return redirect()->route('login')->withErrors(['email' => $result['message']]);
         }
-        return $this->signIn($request, $result['email'], $result['name'], false);
+        return $this->signIn($request, $result['email'], $result['name'], false, $result['role'] ?? null);
     }
 
     /** Real mode, handoff method: Mashpia sends the person back here with a signed note. */
@@ -86,16 +87,24 @@ class LoginController extends Controller
         if (! $result['ok']) {
             return redirect()->route('login')->withErrors(['email' => $result['message']]);
         }
-        return $this->signIn($request, $result['email'], $result['name'], false);
+        return $this->signIn($request, $result['email'], $result['name'], false, $result['role'] ?? null);
     }
 
-    /** Find or create the local account (new people start as "base"; HQ admin sets levels) and sign in. */
-    protected function signIn(Request $request, string $email, ?string $name, bool $remember)
+    /**
+     * Find or create the local account and sign in.
+     * When Mashpia sends a role, the person's admin level is set from the role map
+     * (unless an HQ admin set their level by hand). Nobody becomes HQ admin from login alone.
+     */
+    protected function signIn(Request $request, string $email, ?string $name, bool $remember, ?string $mashpiaRole = null)
     {
         $user = User::firstOrCreate(
             ['email' => $email],
             ['name' => $name ?: Str::before($email, '@'), 'password' => Str::random(40), 'role' => 'base']
         );
+        if ($name && $user->wasRecentlyCreated === false && ! $user->name) {
+            $user->name = $name;
+        }
+        app(MashpiaRoleMapper::class)->applyOnLogin($user, $mashpiaRole);
 
         Auth::login($user, $remember);
         $request->session()->regenerate();
