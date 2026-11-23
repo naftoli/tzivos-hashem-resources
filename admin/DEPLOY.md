@@ -14,7 +14,7 @@ and only for the subdomain (it refuses any visit whose document root isn't `admi
 
 ## 1. Server
 
-- **PHP 8.3 or newer** (Laravel 13). Mashpia's main server (PHP 7.2 / 8.1) is not enough.
+- **PHP 8.3 or newer** (Laravel 13). The lockfile is resolved for PHP 8.3, so 8.3 is enough; PHP 8.4 is not required. Mashpia's main server (PHP 7.2 / 8.1) is not enough.
 - PHP extensions: `ctype`, `curl`, `dom`, `fileinfo`, `filter`, `hash`, `mbstring`, `openssl`,
   `pcre`, `pdo`, `pdo_sqlite`, `session`, `tokenizer`, `xml`, `zip` (zip only for Composer).
 - [Composer](https://getcomposer.org) 2.
@@ -68,7 +68,7 @@ TRUSTED_PROXIES=*
 SESSION_SECURE_COOKIE=true
 SESSION_DOMAIN=null           # admin's own cookie stays on the admin subdomain
 
-ADMIN_OWNER_EMAILS=you@your-email   # Owner emails: always HQ admin; no other admin can lower or remove them
+ADMIN_OWNER_EMAILS=you@your-email   # real Owner emails only (not admin@example.com). Always HQ admin; no other admin can lower or remove them
 
 # Long random secret for the live Resources site to read /api/pages (e.g. `openssl rand -hex 32`).
 # Never share it or put it in the code.
