@@ -47,7 +47,8 @@ return [
     | and the admin level each one should get. Copied into the database on setup; after that,
     | HQ admin edits the list on the Mashpia roles screen.
     |
-    | Only names found in the Resources site / checkAuth sources are listed here.
+    | Teacher, Base Commander and Headquarters come from the Resources site / checkAuth sources.
+    | Director, Principal and Multiple Positions are Mashpia staff positions; they become Base commanders.
     | No Mashpia role is ever mapped to HQ admin (that level is only granted by an existing HQ admin).
     |
     | TODO: News site — no Mashpia role name was found for this level.
@@ -56,6 +57,9 @@ return [
     'role_map' => [
         'Teacher' => 'teacher',
         'Base Commander' => 'base',
+        'Director' => 'base',
+        'Principal' => 'base',
+        'Multiple Positions' => 'base',
         'Headquarters' => 'hq_staff',
     ],
 

@@ -68,7 +68,7 @@ TRUSTED_PROXIES=*
 SESSION_SECURE_COOKIE=true
 SESSION_DOMAIN=null           # admin's own cookie stays on the admin subdomain
 
-ADMIN_OWNER_EMAILS=you@your-real-mashpia-email   # the owner's Mashpia email: always HQ admin
+ADMIN_OWNER_EMAILS=you@your-email   # Owner emails: always HQ admin; no other admin can lower or remove them
 
 # Long random secret for the live Resources site to read /api/pages (e.g. `openssl rand -hex 32`).
 # Never share it or put it in the code.
@@ -128,6 +128,20 @@ People sign in on tzivoshashem.com and Mashpia sets its login cookie for the who
 `MASHPIA_AUTH_METHOD=session` and `MASHPIA_CHECK_URL=https://tzivoshashem.com/resources/checkAuth.php`;
 the admin asks checkAuth.php, server to server, with the person's cookie.
 Only works if the admin is on a subdomain of the same domain people sign in on.
+
+### Email and password
+
+People can also sign in with an email and a password (the Owner, or anyone an HQ admin created an account for), even if they have no Mashpia login. The login page still shows this form when **Sign in with Mashpia** is on.
+
+Create the first Owner (this does not set a password):
+
+    php artisan resources:make-owner --email=you@example.com --first=Sholom --last=Chaskind --org="TH HQ" --org-role=Programmer
+
+Then set the password. It is typed hidden, and does not appear on the screen:
+
+    php artisan resources:set-password you@example.com
+
+An Owner always stays HQ admin. No other admin can lower or delete them. Only an Owner can grant or remove the Owner flag.
 
 ## 5. Check
 

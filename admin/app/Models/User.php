@@ -12,7 +12,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use RuntimeException;
 
-#[Fillable(['name', 'email', 'password', 'role', 'mashpia_role', 'role_locked'])]
+#[Fillable(['name', 'first_name', 'last_name', 'organization', 'organization_role', 'email', 'password', 'role', 'mashpia_role', 'role_locked'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -38,9 +38,13 @@ class User extends Authenticatable
     {
         // Owner accounts always stay HQ admin, whatever code tries to save
         static::saving(function (User $user) {
-            $emails = array_filter([strtolower((string) $user->email), strtolower((string) $user->getOriginal('email'))]);
-            if (array_intersect($emails, config('admin.owners', [])) && $user->role !== 'hq_admin') {
+            if ($user->isOwner() && $user->role !== 'hq_admin') {
                 throw new RuntimeException(self::ownerMessage($user->getOriginal('email') ?: $user->email));
+            }
+        });
+        static::deleting(function (User $user) {
+            if ($user->isOwner()) {
+                throw new RuntimeException(self::ownerMessage($user->email).' This account cannot be deleted.');
             }
         });
     }
@@ -60,9 +64,24 @@ class User extends Authenticatable
         return self::roleLabel($this->role);
     }
 
+    public function isOwnerByEmail(?string $email = null): bool
+    {
+        return in_array(strtolower((string) ($email ?? $this->email)), config('admin.owners', []), true);
+    }
+
     public function isOwner(): bool
     {
-        return in_array(strtolower((string) $this->email), config('admin.owners', []), true);
+        return $this->isOwnerByEmail() || (bool) $this->is_owner;
+    }
+
+    public static function ownerCount(): int
+    {
+        return static::query()->get()->filter(fn (self $user) => $user->isOwner())->count();
+    }
+
+    public function isLastOwner(): bool
+    {
+        return $this->isOwner() && static::ownerCount() <= 1;
     }
 
     public function isHQAdmin(): bool
@@ -127,6 +146,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'role_locked' => 'boolean',
+            'is_owner' => 'boolean',
         ];
     }
 }

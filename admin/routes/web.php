@@ -32,8 +32,10 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('hq')->group(function () {
         Route::get('/admin/roles', [RoleController::class, 'index'])->name('admin.roles');
+        Route::post('/admin/roles', [RoleController::class, 'store'])->name('admin.roles.store');
         Route::put('/admin/roles/{user}', [RoleController::class, 'update'])->name('admin.roles.update');
         Route::post('/admin/roles/{user}/automatic', [RoleController::class, 'reset'])->name('admin.roles.reset');
+        Route::post('/admin/roles/{user}/owner', [RoleController::class, 'setOwner'])->name('admin.roles.owner');
         Route::get('/admin/mashpia-roles', [MashpiaRoleMapController::class, 'index'])->name('admin.mashpia-roles');
         Route::post('/admin/mashpia-roles', [MashpiaRoleMapController::class, 'store'])->name('admin.mashpia-roles.store');
         Route::put('/admin/mashpia-roles/{map}', [MashpiaRoleMapController::class, 'update'])->name('admin.mashpia-roles.update');

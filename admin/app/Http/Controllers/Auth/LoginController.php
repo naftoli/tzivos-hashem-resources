@@ -8,6 +8,7 @@ use App\Services\MashpiaAuthService;
 use App\Services\MashpiaRoleMapper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
 class LoginController extends Controller
@@ -22,33 +23,31 @@ class LoginController extends Controller
 
     public function login(Request $request, MashpiaAuthService $mashpia)
     {
-        if (! $mashpia->enabled()) {
-            // Mashpia off: local password check (testing only)
-            $credentials = $request->validate([
-                'email' => ['required', 'email'],
-                'password' => ['required'],
-            ]);
-
-            if (Auth::attempt($credentials, $request->boolean('remember'))) {
-                $request->session()->regenerate();
-                return redirect()->intended(route('dashboard'));
-            }
-
-            return back()->withErrors(['email' => 'Wrong email or password.'])->onlyInput('email');
-        }
-
-        if ($mashpia->usesMashpiaButton()) {
-            // Real mode: the admin never sees Mashpia passwords; use the "Sign in with Mashpia" button
-            return redirect()->route('login')->withErrors(['email' => 'Please use "Sign in with Mashpia".']);
-        }
-
-        // Mock mode (testing): approve the test emails/domains
         $data = $request->validate([
             'email' => ['required', 'email'],
             'password' => ['nullable', 'string'],
         ]);
         $email = strtolower(trim($data['email']));
+        $password = (string) ($data['password'] ?? '');
+        $user = User::whereRaw('lower(email) = ?', [$email])->first();
 
+        // Email + password works in every mode (owners and accounts created by an HQ admin
+        // may not have a Mashpia login). Lookup is case-insensitive.
+        if ($password !== '' && $user && Hash::check($password, $user->password)) {
+            Auth::login($user, $request->boolean('remember'));
+            $request->session()->regenerate();
+            return redirect()->intended(route('dashboard'));
+        }
+
+        if (! $mashpia->enabled()) {
+            return back()->withErrors(['email' => 'Wrong email or password.'])->onlyInput('email');
+        }
+
+        if ($mashpia->usesMashpiaButton()) {
+            return back()->withErrors(['email' => 'Wrong email or password. Or use "Sign in with Mashpia".'])->onlyInput('email');
+        }
+
+        // Mock mode (testing): approve the test emails/domains without a real password
         $result = $mashpia->check($email);
         if (! $result['ok']) {
             return back()->withErrors(['email' => $result['message'] ?? 'Wrong email or password.'])->onlyInput('email');
@@ -97,11 +96,16 @@ class LoginController extends Controller
      */
     protected function signIn(Request $request, string $email, ?string $name, bool $remember, ?string $mashpiaRole = null)
     {
-        $user = User::firstOrCreate(
-            ['email' => $email],
-            ['name' => $name ?: Str::before($email, '@'), 'password' => Str::random(40), 'role' => 'base']
-        );
-        if ($name && $user->wasRecentlyCreated === false && ! $user->name) {
+        $email = strtolower(trim($email));
+        $user = User::whereRaw('lower(email) = ?', [$email])->first();
+        if (! $user) {
+            $user = User::create([
+                'email' => $email,
+                'name' => $name ?: Str::before($email, '@'),
+                'password' => Str::random(40),
+                'role' => 'base',
+            ]);
+        } elseif ($name && ! $user->name) {
             $user->name = $name;
         }
         app(MashpiaRoleMapper::class)->applyOnLogin($user, $mashpiaRole);
