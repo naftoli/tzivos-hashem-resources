@@ -66,6 +66,8 @@ Route::middleware('auth')->group(function () {
         Route::post('/admin/uploads', [UploadController::class, 'store'])->name('admin.uploads.store');
         Route::get('/admin/uploads/{upload}/edit', [UploadController::class, 'edit'])->whereNumber('upload')->name('admin.uploads.edit');
         Route::put('/admin/uploads/{upload}', [UploadController::class, 'update'])->whereNumber('upload')->name('admin.uploads.update');
+        Route::delete('/admin/uploads/{upload}', [UploadController::class, 'destroy'])->whereNumber('upload')->name('admin.uploads.destroy');
+        Route::post('/admin/uploads/{upload}/restore', [UploadController::class, 'restore'])->withTrashed()->whereNumber('upload')->name('admin.uploads.restore');
         Route::get('/admin/uploads/check-url', [UploadController::class, 'checkUrl'])->name('admin.uploads.check-url');
         Route::get('/admin/uploads/hebrew-date', [UploadController::class, 'hebrew'])->name('admin.uploads.hebrew');
         Route::get('/admin/uploads/site', [UploadController::class, 'siteParts'])->name('admin.uploads.site');

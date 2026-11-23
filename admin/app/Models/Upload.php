@@ -6,10 +6,18 @@ use App\Support\SiteUrl;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Upload extends Model
 {
-    protected $fillable = ['site_id', 'original_name', 'stored_path', 'size', 'mime_type', 'page_url', 'page_key', 'page_block_id', 'destination', 'uploaded_by', 'file_type'];
+    use SoftDeletes;
+
+    protected $fillable = ['site_id', 'original_name', 'stored_path', 'size', 'mime_type', 'page_url', 'page_key', 'page_block_id', 'destination', 'uploaded_by', 'file_type', 'deleted_by', 'deleted_by_admin'];
+
+    protected $casts = [
+        'deleted_at' => 'datetime',
+        'deleted_by_admin' => 'boolean',
+    ];
 
     /** File types, as listed in the Content Portal Build Brief. Stored key => shown name. */
     public const TYPES = [
@@ -40,6 +48,41 @@ class Upload extends Model
     public function pageBlock(): BelongsTo
     {
         return $this->belongsTo(PageBlock::class);
+    }
+
+    public function deletedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'deleted_by');
+    }
+
+    /** HQ admin, or the person who uploaded it. Files with no uploader: HQ admin only. */
+    public function canBeDeletedBy(?User $user): bool
+    {
+        if (! $user || $this->trashed()) {
+            return false;
+        }
+        if ($user->isHQAdmin()) {
+            return true;
+        }
+
+        return $this->uploaded_by !== null && $this->uploaded_by === $user->id;
+    }
+
+    /** HQ admin always. The uploader only if they deleted it themselves, not if an HQ admin did. */
+    public function canBeRestoredBy(?User $user): bool
+    {
+        if (! $user || ! $this->trashed()) {
+            return false;
+        }
+        if ($user->isHQAdmin()) {
+            return true;
+        }
+        if ($this->deleted_by_admin) {
+            return false;
+        }
+
+        return $this->uploaded_by !== null && $this->uploaded_by === $user->id
+            && $this->deleted_by === $user->id;
     }
 
     public function permissions(): HasMany

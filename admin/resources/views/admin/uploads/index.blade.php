@@ -5,7 +5,11 @@
         .file-drop.is-dragover input[type=file] { border-color: var(--blue); background: #e1f0ff; }
         .file-drop-hint { color: #7e8299; font-size: 12px; margin: 8px 0 0; }
         .file-drop-names { margin: 8px 0 0; padding: 0; list-style: none; color: #3f4254; font-size: 12px; }
-        .file-drop-names li { margin: 2px 0; word-break: break-all; }
+        .file-drop-names li { margin: 2px 0; display: flex; align-items: center; gap: 8px; word-break: break-all; }
+        .file-drop-remove { border: 0; background: transparent; color: #d1213d; cursor: pointer; font: inherit; font-weight: 600; padding: 0 4px; line-height: 1; }
+        .file-drop-remove:hover { color: #a10d24; }
+        .act.red { background: #ffe2e5; color: #d1213d; width: auto; padding: 0 10px; font: inherit; font-size: 12px; font-weight: 600; }
+        .act.blue-text { background: #e1f0ff; color: var(--blue); width: auto; padding: 0 10px; font: inherit; font-size: 12px; font-weight: 600; }
     </style>
 @endpush
 
@@ -80,6 +84,13 @@
                             @if (auth()->user()->isHQ() || $upload->uploaded_by === auth()->id())
                                 <a class="act" href="{{ route('admin.uploads.edit', $upload) }}" title="Change page or who can see it"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></a>
                             @endif
+                            @if ($upload->canBeDeletedBy(auth()->user()))
+                                <form method="POST" action="{{ route('admin.uploads.destroy', $upload) }}" style="display:inline;margin:0" onsubmit="return confirm('Delete this file? You can restore it later from the Deleted section.')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="act text red" title="Delete {{ $upload->original_name }}">Delete</button>
+                                </form>
+                            @endif
                         </td>
                     </tr>
                 @empty
@@ -90,6 +101,40 @@
             <div class="hint" style="color:#b5b5c3;font-size:12px;margin-top:10px">Green level = can see it now. Orange = not yet, or no longer (outside its dates). Times are New York time.</div>
         </div>
     </div>
+
+    @if ($deletedUploads->count())
+    <div class="card">
+        <div class="card-head"><h2>Deleted</h2><span class="sub">{{ $deletedUploads->count() }} total</span></div>
+        <div class="card-body" style="padding-top:6px">
+            <p style="margin:0 0 12px;color:#7e8299">These files are hidden and can't be opened until someone restores them.</p>
+            <table class="tbl">
+                <thead>
+                    <tr><th>File</th><th>Type</th><th>Page on the site</th><th>Deleted by</th><th class="num">Actions</th></tr>
+                </thead>
+                <tbody>
+                @foreach ($deletedUploads as $upload)
+                    <tr class="row">
+                        <td class="primary" style="word-break:break-all">{{ $upload->original_name }}</td>
+                        <td><span class="pill {{ $upload->file_type ? 'purple' : 'grey' }}">{{ $upload->typeLabel() }}</span></td>
+                        <td style="word-break:break-all">{{ $upload->pageLabel() ?? $upload->page_key ?? '—' }}</td>
+                        <td>{{ $upload->deletedBy?->email ?? 'Unknown' }}@if ($upload->deleted_by_admin) <span class="pill grey">Admin</span>@endif</td>
+                        <td class="acts" style="white-space:nowrap">
+                            @if ($upload->canBeRestoredBy(auth()->user()))
+                                <form method="POST" action="{{ route('admin.uploads.restore', $upload) }}" style="display:inline;margin:0">
+                                    @csrf
+                                    <button type="submit" class="act text blue-text" title="Restore {{ $upload->original_name }}">Restore</button>
+                                </form>
+                            @else
+                                <span style="font-size:12px;color:#7e8299">Only an admin can restore this</span>
+                            @endif
+                        </td>
+                    </tr>
+                @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+    @endif
 @endsection
 
 @push('scripts')
@@ -119,14 +164,32 @@
         return Array.prototype.indexOf.call(types, 'Files') !== -1;
     }
 
+    function removeFile(input, index) {
+        var dt = new DataTransfer();
+        Array.prototype.forEach.call(input.files, function (f, i) {
+            if (i !== index) dt.items.add(f);
+        });
+        input.files = dt.files;
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
     function renderNames(box, input) {
         var list = box.querySelector('.file-drop-names');
         if (!list) return;
         list.innerHTML = '';
         if (!input.files.length) { list.hidden = true; return; }
-        Array.prototype.forEach.call(input.files, function (f) {
+        Array.prototype.forEach.call(input.files, function (f, i) {
             var li = document.createElement('li');
-            li.textContent = f.name;
+            var name = document.createElement('span');
+            name.textContent = f.name;
+            var rm = document.createElement('button');
+            rm.type = 'button';
+            rm.className = 'file-drop-remove';
+            rm.setAttribute('aria-label', 'Remove ' + f.name);
+            rm.textContent = '✕';
+            rm.addEventListener('click', function () { removeFile(input, i); });
+            li.appendChild(name);
+            li.appendChild(rm);
             list.appendChild(li);
         });
         list.hidden = false;

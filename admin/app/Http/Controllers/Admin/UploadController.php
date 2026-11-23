@@ -20,9 +20,17 @@ class UploadController extends Controller
 {
     public function index()
     {
+        $user = request()->user();
+        $siteId = CurrentSite::id();
+        $deleted = Upload::onlyTrashed()->with(['uploader', 'permissions', 'pageBlock.page', 'deletedBy'])->where('site_id', $siteId)->latest('deleted_at');
+        if (! $user->isHQAdmin()) {
+            $deleted->where('uploaded_by', $user->id);
+        }
+
         return view('admin.uploads.index', [
             'site' => CurrentSite::get(),
-            'uploads' => Upload::with(['uploader', 'permissions', 'pageBlock.page'])->where('site_id', CurrentSite::id())->latest()->get(),
+            'uploads' => Upload::with(['uploader', 'permissions', 'pageBlock.page'])->where('site_id', $siteId)->latest()->get(),
+            'deletedUploads' => $deleted->get(),
             'perms' => $this->formDefaults(null),
         ]);
     }
@@ -94,6 +102,35 @@ class UploadController extends Controller
         return redirect()->route('admin.uploads')->with('status', "Saved {$upload->original_name}.");
     }
 
+    public function destroy(Request $request, Upload $upload)
+    {
+        $this->authorizeDelete($request, $upload);
+
+        $upload->forceFill([
+            'deleted_by' => $request->user()->id,
+            'deleted_by_admin' => $request->user()->isHQAdmin(),
+        ])->save();
+        $upload->delete();
+
+        return redirect()->route('admin.uploads')
+            ->with('status', "Deleted {$upload->original_name}. You can restore it from the Deleted section.");
+    }
+
+    public function restore(Request $request, Upload $upload)
+    {
+        abort_unless($upload->trashed(), 404);
+        $this->authorizeRestore($request, $upload);
+
+        $name = $upload->original_name;
+        $upload->restore();
+        $upload->forceFill([
+            'deleted_by' => null,
+            'deleted_by_admin' => false,
+        ])->save();
+
+        return redirect()->route('admin.uploads')->with('status', "Restored {$name}.");
+    }
+
     /** Check a pasted address (shown under the field while typing) */
     public function checkUrl(Request $request)
     {
@@ -123,6 +160,23 @@ class UploadController extends Controller
         $d = HebrewDate::toSecular((int) $request->query('d'), (int) $request->query('m'), (int) $request->query('y'));
         return response()->json($d ? ['ok' => true, 'date' => $d, 'label' => Carbon::parse($d)->format('D, M j, Y')]
             : ['ok' => false, 'message' => "That Hebrew date doesn't exist in that year."]);
+    }
+
+
+    private function authorizeDelete(Request $request, Upload $upload): void
+    {
+        abort_unless($upload->site_id === CurrentSite::id(), 404);
+        if (! $upload->canBeDeletedBy($request->user())) {
+            abort(response()->view('errors.access-denied', ['message' => "You don't have access to delete this file."], 403));
+        }
+    }
+
+    private function authorizeRestore(Request $request, Upload $upload): void
+    {
+        abort_unless($upload->site_id === CurrentSite::id(), 404);
+        if (! $upload->canBeRestoredBy($request->user())) {
+            abort(response()->view('errors.access-denied', ['message' => "You don't have access to restore this file."], 403));
+        }
     }
 
     private function authorizeEdit(Request $request, Upload $upload): void

@@ -47,6 +47,9 @@ class PublicFileController extends Controller
     /** Only signed-in people whose level may see the file right now get it */
     private function send(Request $request, Upload $upload)
     {
+        if ($upload->trashed()) {
+            abort(404);
+        }
         if (! $request->user()) {
             return redirect()->guest(route('login'));
         }
