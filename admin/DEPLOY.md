@@ -9,7 +9,8 @@ served from `mashpia.com/public/resources/site/`), the admin is the `admin/` fol
 The subdomain's **document root is that `admin/public` folder** (for example
 `.../public/resources/site/admin/public`, or `resources/admin/public` if it is checked out on its own).
 `admin/.htaccess` blocks the admin folder from being opened through mashpia.com, so its settings,
-database and uploads can't be downloaded; `admin/public/.htaccess` opens only the public folder again.
+database and uploads can't be downloaded; `admin/public/.htaccess` opens only the public folder again,
+and only for the subdomain (it refuses any visit whose document root isn't `admin/public`).
 
 ## 1. Server
 
@@ -32,7 +33,7 @@ php artisan key:generate     # only on a fresh install; keep the old APP_KEY if 
 ```
 
 Data is **not** in git (the database, uploads and `.env` are private). Copy `database/database.sqlite`
-and `storage/app/private/` from the PC to the same places on the server (pages, people, uploads).
+and `storage/app/public/` (the uploads; still private, see below) from the PC to the same places on the server (pages, people, uploads).
 Or start fresh with `touch database/database.sqlite`, `php artisan migrate --force` and the import
 commands (`resources:import-pages`, `resources:import-files`).
 **Don't run `php artisan db:seed` on the server**: it makes test accounts with the password "password".
@@ -46,6 +47,8 @@ php artisan view:cache
 
 Permissions: the web server user must be able to write `storage/`, `bootstrap/cache/` and
 `database/` (the folder, for SQLite's journal file) and `database/database.sqlite`.
+Run the `php artisan` commands as that same user (or fix ownership afterwards), so the web server
+can still write the files they create.
 
 **Do not run `php artisan storage:link` and do not create `public/storage`.** Uploaded files are
 private and are only served through `/files/{id}/{name}`, which checks sign-in and visibility dates.
@@ -129,4 +132,5 @@ Only works if the admin is on a subdomain of the same domain people sign in on.
   `/admin/login-settings` lists what's missing).
 - `https://resources.tzivoshashem.com/storage/anything` gives 404.
 - `https://resources.tzivoshashem.com/api/pages/home` gives 401 without sign-in.
-- `https://tzivoshashem.com/resources/site/admin/.env` (and any other path into `admin/`) gives 403.
+- `https://tzivoshashem.com/resources/site/admin/.env` (and any other path into `admin/`) gives 403,
+  including `https://tzivoshashem.com/resources/site/admin/public/login`.

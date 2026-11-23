@@ -11,6 +11,11 @@ DirectoryIndex index.php
 
     RewriteEngine On
 
+    # Answer only on the admin's own subdomain (whose document root is this folder),
+    # not through the main site's path into admin/public.
+    RewriteCond %{DOCUMENT_ROOT} !/admin/public/?$
+    RewriteRule ^ - [F]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
