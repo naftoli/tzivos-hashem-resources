@@ -22,6 +22,7 @@ class RoleController extends Controller
 
     public function store(Request $request)
     {
+        $request->mergeIfMissing(['role' => 'teacher']);
         $data = $request->validate([
             'first_name' => ['required', 'string', 'max:80'],
             'last_name' => ['required', 'string', 'max:80'],

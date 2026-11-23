@@ -278,6 +278,58 @@ class MashpiaRoleMappingTest extends TestCase
             ->assertSee('Director');
     }
 
+    public function test_create_account_form_defaults_to_teacher(): void
+    {
+        $admin = $this->hqAdmin();
+        $html = $this->actingAs($admin)->get(route('admin.roles'))->assertOk()->getContent();
+        $this->assertSame(1, preg_match('/action="[^"]*\/admin\/roles"[^>]*>.*?<select name="role".*?<\/select>/s', $html, $m));
+        $select = $m[0];
+        $this->assertMatchesRegularExpression('/<option value="teacher"\s+selected[^>]*>Teachers<\/option>/', $select);
+        $this->assertDoesNotMatchRegularExpression('/<option value="hq_admin"\s+selected/', $select);
+    }
+
+    public function test_create_account_uses_teacher_when_no_level_is_sent(): void
+    {
+        $admin = $this->hqAdmin();
+        $this->actingAs($admin)->post(route('admin.roles.store'), [
+            'first_name' => 'Rivka',
+            'last_name' => 'Cohen',
+            'organization' => 'A School',
+            'organization_role' => 'Teacher',
+            'email' => 'rivka.cohen@example.org',
+            'password' => 'secret-pass',
+            'password_confirmation' => 'secret-pass',
+        ])->assertRedirect(route('admin.roles'));
+
+        $user = User::where('email', 'rivka.cohen@example.org')->first();
+        $this->assertNotNull($user);
+        $this->assertSame('teacher', $user->role);
+        $this->assertTrue($user->role_locked);
+    }
+
+    public function test_create_account_keeps_the_chosen_level_after_a_validation_error(): void
+    {
+        $admin = $this->hqAdmin();
+        $html = $this->actingAs($admin)
+            ->from(route('admin.roles'))
+            ->followingRedirects()
+            ->post(route('admin.roles.store'), [
+                'first_name' => 'Ada',
+                'last_name' => 'Levi',
+                'organization' => 'A School',
+                'organization_role' => 'Teacher',
+                'email' => 'not-an-email',
+                'password' => 'secret-pass',
+                'password_confirmation' => 'secret-pass',
+                'role' => 'hq_staff',
+            ])
+            ->assertOk()
+            ->assertSee('Create account')
+            ->getContent();
+        $this->assertSame(1, preg_match('/action="[^"]*\/admin\/roles"[^>]*>.*?<select name="role".*?<\/select>/s', $html, $m));
+        $this->assertMatchesRegularExpression('/<option value="hq_staff"\s+selected[^>]*>HQ staff<\/option>/', $m[0]);
+        $this->assertDoesNotMatchRegularExpression('/<option value="teacher"\s+selected/', $m[0]);
+    }
     public function test_create_account_rejects_a_duplicate_email(): void
     {
         $admin = $this->hqAdmin();

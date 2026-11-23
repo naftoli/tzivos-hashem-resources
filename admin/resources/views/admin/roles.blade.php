@@ -50,7 +50,7 @@
                 <label style="display:flex;flex-direction:column;gap:4px">Role on site
                     <select name="role" style="height:32px">
                         @foreach ($roles as $role => $label)
-                            <option value="{{ $role }}" @selected(old('role') === $role)>{{ $label }}</option>
+                            <option value="{{ $role }}" @selected(old('role', 'teacher') === $role)>{{ $label }}</option>
                         @endforeach
                     </select>
                 </label>
