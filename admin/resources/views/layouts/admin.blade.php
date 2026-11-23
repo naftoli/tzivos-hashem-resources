@@ -141,6 +141,7 @@
         .act.green { background: #c9f7f5; color: #1bc5bd; }
         .act.purple { background: #eee5ff; color: #8950fc; }
         .act:hover { filter: brightness(.95); }
+        .act.text { width: auto; padding: 0 10px; font: inherit; font-size: 12px; font-weight: 600; white-space: nowrap; }
 
         .btn { display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 18px; border-radius: 6px; border: 0; background: var(--blue); color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
         .btn:hover { background: #187de4; }

@@ -1,4 +1,13 @@
 @extends('layouts.admin')
+@push('head')
+    <style>
+        table.tbl th.num, table.tbl td.acts { min-width: max-content; }
+        table.tbl td.acts { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 6px; white-space: normal; }
+        table.tbl td.acts form { display: inline-flex; flex-wrap: nowrap; align-items: center; gap: 6px; margin: 0; flex: 0 0 auto; }
+        .users-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    </style>
+@endpush
+
 
 @section('title', 'Roles | Resources Admin')
 @section('page-title', 'User roles')
@@ -52,7 +61,7 @@
 
     <div class="card">
         <div class="card-head"><h2>Users</h2><span class="sub">{{ $users->count() }} total</span></div>
-        <div class="card-body" style="padding-top:6px">
+        <div class="card-body users-table-wrap" style="padding-top:6px">
             <p style="margin:0 0 12px;color:#7e8299">A change you make here is set by hand, so signing in with Mashpia will not overwrite it. “Use Mashpia role” turns automatic updates back on. Nobody becomes HQ admin from Mashpia login; you can grant or remove HQ admin here (there must always be at least one). An Owner cannot be lowered or removed by any other admin; only an Owner can grant or remove the Owner flag.</p>
             <table class="tbl">
                 <thead>
@@ -95,7 +104,7 @@
                         <td>{{ $user->mashpia_role ?: '—' }}</td>
                         <td class="acts">
                             @php $locked = $user->isOwner() || $user->is(auth()->user()); @endphp
-                            <form method="POST" action="{{ route('admin.roles.update', $user) }}" style="display:inline-flex;gap:6px;margin:0;flex-wrap:wrap;justify-content:flex-end">
+                            <form method="POST" action="{{ route('admin.roles.update', $user) }}">
                                 @csrf
                                 @method('PUT')
                                 <select name="role" style="height:32px" @disabled($locked) title="{{ $user->isOwner() ? 'Owner account: always HQ admin' : ($locked ? 'You can\'t change your own role' : 'Change role') }}">
@@ -106,23 +115,23 @@
                                 <button type="submit" class="act" title="Save role" @disabled($locked)><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></button>
                             </form>
                             @if (! $locked && $user->mashpia_role)
-                                <form method="POST" action="{{ route('admin.roles.reset', $user) }}" style="display:inline;margin:0">
+                                <form method="POST" action="{{ route('admin.roles.reset', $user) }}">
                                     @csrf
-                                    <button type="submit" class="act" title="Use Mashpia role (automatic)">Use Mashpia role</button>
+                                    <button type="submit" class="act text" title="Use Mashpia role (automatic)">Use Mashpia role</button>
                                 </form>
                             @endif
                             @if (auth()->user()->isOwner() && ! $user->is(auth()->user()))
                                 @if ($user->isOwner())
-                                    <form method="POST" action="{{ route('admin.roles.owner', $user) }}" style="display:inline;margin:0">
+                                    <form method="POST" action="{{ route('admin.roles.owner', $user) }}">
                                         @csrf
                                         <input type="hidden" name="owner" value="0">
-                                        <button type="submit" class="act" title="Remove Owner">Remove Owner</button>
+                                        <button type="submit" class="act text" title="Remove Owner">Remove Owner</button>
                                     </form>
                                 @else
-                                    <form method="POST" action="{{ route('admin.roles.owner', $user) }}" style="display:inline;margin:0">
+                                    <form method="POST" action="{{ route('admin.roles.owner', $user) }}">
                                         @csrf
                                         <input type="hidden" name="owner" value="1">
-                                        <button type="submit" class="act" title="Make Owner">Make Owner</button>
+                                        <button type="submit" class="act text" title="Make Owner">Make Owner</button>
                                     </form>
                                 @endif
                             @endif
