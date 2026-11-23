@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Upload;
+use App\Services\FileGrant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -50,15 +51,29 @@ class PublicFileController extends Controller
         if ($upload->trashed()) {
             abort(404);
         }
+        $grantedRole = app(FileGrant::class)->roleFromRequest($request, $upload);
+        if ($grantedRole !== null) {
+            if (! $upload->visibleToRole($grantedRole)) {
+                return response()->view('errors.access-denied', ['message' => "You don't have access to this file right now."], 403);
+            }
+
+            return $this->bytes($upload);
+        }
         if (! $request->user()) {
             return redirect()->guest(route('login'));
         }
         if (! $upload->visibleTo($request->user())) {
             return response()->view('errors.access-denied', ['message' => "You don't have access to this file right now."], 403);
         }
+        return $this->bytes($upload);
+    }
+
+    private function bytes(Upload $upload)
+    {
         if (! Storage::disk('public')->exists($upload->stored_path)) {
             abort(404);
         }
+
         return response()->file(Storage::disk('public')->path($upload->stored_path), [
             'Content-Type' => $upload->mime_type ?: 'application/octet-stream',
             'Content-Disposition' => 'inline; filename="' . addslashes($upload->original_name) . '"',

@@ -19,6 +19,9 @@ class ApiPageAccess
         $token = (string) config('admin.api_token');
         $given = (string) $request->bearerToken();
         if ($token !== '' && $given !== '' && hash_equals($token, $given)) {
+            // The secret proves this call came from the Mashpia proxy, not a browser.
+            $request->attributes->set('resources_proxy', true);
+
             return $next($request);
         }
         $user = $request->user();

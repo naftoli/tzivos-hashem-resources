@@ -17,6 +17,7 @@ class AdminOnlyPagesTest extends TestCase
         'admin.admin-requests',
         'admin.sites',
         'admin.login-settings',
+        'admin.stats',
     ];
 
     private const ADMIN_LABELS = [
@@ -25,6 +26,7 @@ class AdminOnlyPagesTest extends TestCase
         'Admin requests',
         'Sign-in settings',
         'Manage sites',
+        'Stats',
     ];
 
     public static function nonAdminRoles(): array

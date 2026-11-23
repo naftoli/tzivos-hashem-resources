@@ -19,5 +19,9 @@ return [
 
     // Secret the live site's server sends (Authorization: Bearer ...) to read page data from /api/...
     // Empty = no token access; then only signed-in HQ admin / HQ staff can read it.
+    // The public site never sees this. Mashpia's siteApi.php reads it from its own config file.
     'api_token' => env('RESOURCES_API_TOKEN', ''),
+
+    // Where the public site asks for a page, a search, or a file. Same folder as checkAuth.php.
+    'site_api' => env('RESOURCES_SITE_API', '/resources/siteApi.php'),
 ];

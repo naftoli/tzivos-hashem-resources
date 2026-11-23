@@ -115,13 +115,17 @@ class Upload extends Model
     /** May this signed-in user open the file right now? HQ admin always can. */
     public function visibleTo(?User $user): bool
     {
-        if (! $user) {
-            return false;
-        }
-        if ($user->isHQAdmin()) {
+        return $user ? $this->visibleToRole($user->role) : false;
+    }
+
+    /** Same check for a level name, when the person is not an admin account. */
+    public function visibleToRole(string $role): bool
+    {
+        if ($role === 'hq_admin') {
             return true;
         }
-        $perm = $this->permissions->firstWhere('role', $user->role);
+        $perm = $this->permissions->firstWhere('role', $role);
+
         return $perm !== null && $perm->isOpen();
     }
 

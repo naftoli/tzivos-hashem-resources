@@ -5,7 +5,9 @@ use App\Http\Controllers\Admin\MashpiaRoleMapController;
 use App\Http\Controllers\Admin\PageController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SiteController;
+use App\Http\Controllers\Api\ContentController as ApiContentController;
 use App\Http\Controllers\Api\PageController as ApiPageController;
+use App\Http\Controllers\Admin\StatsController;
 use App\Http\Controllers\Admin\UploadController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\NoAccessController;
@@ -52,6 +54,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/admin/sites/{site}/edit', [SiteController::class, 'edit'])->name('admin.sites.edit');
         Route::put('/admin/sites/{site}', [SiteController::class, 'update'])->name('admin.sites.update');
         Route::get('/admin/login-settings', fn () => view('admin.login-settings', ['mode' => app(\App\Services\MashpiaAuthService::class)->mode()]))->name('admin.login-settings');
+        Route::get('/admin/stats', [StatsController::class, 'index'])->name('admin.stats');
+        Route::get('/admin/stats.csv', [StatsController::class, 'csv'])->name('admin.stats.csv');
     });
 
     Route::middleware('role:hq_admin,hq_staff')->group(function () {
@@ -85,6 +89,10 @@ Route::middleware('auth')->group(function () {
 Route::middleware(\App\Http\Middleware\ApiPageAccess::class)->group(function () {
     Route::get('/api/pages/{page}', [ApiPageController::class, 'show'])->name('api.pages.show'); // Resources site (original address)
     Route::get('/api/sites/{site}/pages/{page}', [ApiPageController::class, 'showForSite'])->name('api.sites.pages.show');
+    // The public site, through Mashpia's siteApi.php (the token plus who is signed in)
+    Route::get('/api/content/pages/{pageId}', [ApiContentController::class, 'page'])->where('pageId', '[^/]+')->name('api.content.page');
+    Route::get('/api/content/search', [ApiContentController::class, 'search'])->name('api.content.search');
+    Route::get('/api/content/files/{upload}', [ApiContentController::class, 'file'])->whereNumber('upload')->name('api.content.file');
 });
 
 // Uploaded files, at the address the app gives them (signed in + allowed level + inside its dates)

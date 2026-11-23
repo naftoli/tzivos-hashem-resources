@@ -10,6 +10,7 @@
         'requests' => '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 15l2 2 4-4"/>',
         'sites' => '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
         'signin' => '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+        'stats' => '<path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 16v-5"/><path d="M12 16V8"/><path d="M16 16v-3"/>',
         'logout' => '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/>',
     ];
     $siteNow ??= \App\Support\CurrentSite::get();
@@ -28,6 +29,7 @@
         $nav['Settings'][] = ['Mashpia roles', route('admin.mashpia-roles'), 'map', $is('admin.mashpia-roles*')];
         $nav['Settings'][] = ['Admin requests', route('admin.admin-requests'), 'requests', $is('admin.admin-requests*')];
         $nav['Settings'][] = ['Sign-in settings', route('admin.login-settings'), 'signin', $is('admin.login-settings')];
+        $nav['Settings'][] = ['Stats', route('admin.stats'), 'stats', $is('admin.stats')];
     }
 @endphp
 <!DOCTYPE html>
