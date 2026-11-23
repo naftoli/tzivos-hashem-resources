@@ -151,3 +151,40 @@ An Owner always stays HQ admin. No other admin can lower or delete them. Only an
 - `https://resources.tzivoshashem.com/api/pages/home` gives 401 without sign-in.
 - `https://tzivoshashem.com/resources/site/admin/.env` (and any other path into `admin/`) gives 403,
   including `https://tzivoshashem.com/resources/site/admin/public/login`.
+
+## 6. The public Resources site
+
+The site people already use (the built files in `dist/`, served at `mashpia.com/public/resources/site/dist`)
+does not change its address or its look. It still has every page it was built with. Those built-in pages
+stay on the site as a spare copy. If the steps below are not done yet, or the admin is down, people keep
+seeing that spare copy. Nothing on the live site breaks.
+
+When the steps below are done, the site reads pages from the admin instead. A word you change in the admin
+shows on the site. A file link is shown only when that person's level may open it, and only inside the
+dates you set. The search box also finds file names they may open. Each time they open a page or a file,
+the admin writes down their email, their level, what they opened, and when. It does not write their name,
+their computer, or where they are.
+
+Do these things on the Mashpia server, in the same folder as `checkAuth.php`
+(the public site calls `/resources/siteApi.php`):
+
+1. Copy `admin/deploy/siteApi.php` to that folder.
+2. Copy `admin/deploy/siteApi.config.example.php` to `siteApi.config.php` in that same folder.
+   Put the real values in `siteApi.config.php` only. Do not commit that file and do not put it in `dist/`.
+   - `token` is a long random string (`openssl rand -hex 32`). The same string goes in the admin `.env`
+     as `RESOURCES_API_TOKEN`.
+   - `admin` is `https://resources.tzivoshashem.com`.
+3. Open `siteApi.php` and replace the sign-in block with the same lines `checkAuth.php` uses to find
+   who is signed in. Set `$email`, `$name`, and `$role` (`$role` is the Mashpia words, such as `Teacher`
+   or `Base Commander`). Leave `$email` empty when nobody is signed in.
+4. On the admin, run `php artisan migrate --force` so the stats table exists.
+5. The admin must already have the pages and the files (`resources:import-pages` and `resources:import-files`,
+   or the copy of the database and `storage/app/public/` from the computer where they were imported).
+
+The secret stays on the two servers. The browser never sees it. The site asks `siteApi.php`. That file
+checks the Mashpia sign-in, then asks the admin and sends the email and the Mashpia role. The admin uses
+the level saved for that email when the person already has an admin account. Otherwise it uses the Mashpia
+role list (Teachers, Base commanders, and so on).
+
+HQ admin opens **Stats** for the most opened pages, the most opened files, each person, a date range,
+and a CSV download. Other levels cannot open that screen.
