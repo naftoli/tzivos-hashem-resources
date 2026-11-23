@@ -16,6 +16,8 @@ export interface SearchEntry {
   t: string;
   k?: string;
   x?: string;
+  /** Set when the result is a file the person may open. The panel opens this address. */
+  href?: string | null;
 }
 
 interface IndexedEntry extends SearchEntry {

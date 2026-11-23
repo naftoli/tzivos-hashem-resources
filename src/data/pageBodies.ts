@@ -34,7 +34,8 @@ const lazyCache: Record<string, PageBundle> = {};
  * route's page, so it should always render visible. (Ported verbatim from the
  * old pageRegistry's `markOn`.)
  */
-function markOn(html: string): string {
+/** The extracted fragments start hidden until `.on` is set. The admin's HTML needs the same. */
+export function markPageOn(html: string): string {
   return html.replace('class="page"', 'class="page on"');
 }
 
@@ -54,7 +55,7 @@ export async function loadPageHtml(pageId: string): Promise<string | null> {
   if (!branch) return null;
   const bundle = await bundleFor(branch);
   const html = bundle?.[pageId];
-  return html == null ? null : markOn(html);
+  return html == null ? null : markPageOn(html);
 }
 
 /**
@@ -68,5 +69,5 @@ export function peekPageHtml(pageId: string): string | null {
   if (!branch) return null;
   const bundle = STATIC[branch] ?? lazyCache[branch];
   const html = bundle?.[pageId];
-  return html == null ? null : markOn(html);
+  return html == null ? null : markPageOn(html);
 }

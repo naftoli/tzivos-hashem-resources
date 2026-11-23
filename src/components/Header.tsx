@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useTzhUser } from '@/components/AuthGate';
 import { getWeekInfo } from '@/lib/hebrewWeek';
 import { setCtxFrom } from '@/lib/navState';
-import { buildSearchIndex, norm, searchSite, type SearchResult } from '@/lib/search';
+import { buildSearchIndex, norm, searchSite, type SearchEntry, type SearchResult } from '@/lib/search';
+import { fetchRemoteSearch } from '@/lib/siteApi';
 import { useEscapeToClose } from '@/lib/useEscapeToClose';
 import SIDX from '@/data/static/SIDX.json';
 import type { BranchId } from '@/types';
@@ -59,7 +60,32 @@ export function Header({ activeBranch }: { activeBranch: BranchId }) {
     setWeekParsha(getWeekInfo().pe);
   }, []);
 
-  const results: SearchResult[] = useMemo(() => searchSite(query, searchIndex), [query, searchIndex]);
+  const localResults: SearchResult[] = useMemo(() => searchSite(query, searchIndex), [query, searchIndex]);
+  const [remoteResults, setRemoteResults] = useState<SearchEntry[] | null>(null);
+
+  // The admin search includes file names this person may open. If it can't be
+  // reached, the built-in page list (SIDX) is used, same as before.
+  useEffect(() => {
+    if (norm(query).length < 2) {
+      setRemoteResults(null);
+      return;
+    }
+    setRemoteResults(null);
+    let alive = true;
+    const timer = setTimeout(() => {
+      fetchRemoteSearch(query).then((hits) => {
+        if (alive) setRemoteResults(hits);
+      });
+    }, 200);
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+    };
+  }, [query]);
+
+  const results: SearchResult[] = remoteResults
+    ? remoteResults.map((entry) => ({ score: 0, entry }))
+    : localResults;
 
   // Port of legacy `document.addEventListener('input', ...)`'s `qn.length<2`
   // close-the-panel behavior — the panel opens once there's a real query,
@@ -87,8 +113,12 @@ export function Header({ activeBranch }: { activeBranch: BranchId }) {
   // (brand/me/branch links) — this search UI sits outside any content page's
   // container, so it never goes through ContentPage's delegated `[data-go]`
   // handler either.
-  function goToResult(id: string) {
-    go(id);
+  function goToResult(entry: SearchEntry) {
+    if (entry.href) {
+      window.open(entry.href, '_blank', 'noopener');
+    } else if (entry.g) {
+      go(entry.g);
+    }
     setOpen(false);
     setQuery('');
   }
@@ -140,10 +170,10 @@ export function Header({ activeBranch }: { activeBranch: BranchId }) {
               {open &&
                 results.map(({ entry }) => (
                   <button
-                    key={entry.g}
+                    key={entry.href || entry.g}
                     className="sr"
-                    data-go={entry.g}
-                    onClick={() => goToResult(entry.g)}
+                    data-go={entry.g || undefined}
+                    onClick={() => goToResult(entry)}
                   >
                     <b>{entry.t}</b>
                     <span>{entry.k || ''}</span>
