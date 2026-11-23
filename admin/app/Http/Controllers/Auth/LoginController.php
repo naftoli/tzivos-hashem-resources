@@ -35,8 +35,7 @@ class LoginController extends Controller
         // may not have a Mashpia login). Lookup is case-insensitive.
         if ($password !== '' && $user && Hash::check($password, $user->password)) {
             Auth::login($user, $request->boolean('remember'));
-            $request->session()->regenerate();
-            return redirect()->intended(route('dashboard'));
+            return $this->afterLogin($request, $user);
         }
 
         if (! $mashpia->enabled()) {
@@ -111,7 +110,16 @@ class LoginController extends Controller
         app(MashpiaRoleMapper::class)->applyOnLogin($user, $mashpiaRole);
 
         Auth::login($user, $remember);
+
+        return $this->afterLogin($request, $user);
+    }
+
+    protected function afterLogin(Request $request, User $user)
+    {
         $request->session()->regenerate();
+        if (! $user->canAccessAdminSite()) {
+            return redirect()->route('access.denied');
+        }
 
         return redirect()->intended(route('dashboard'));
     }

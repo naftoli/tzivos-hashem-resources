@@ -89,35 +89,35 @@ class UploadDeleteTest extends TestCase
 
     public function test_uploader_can_delete_and_restore_their_own_file(): void
     {
-        $teacher = $this->teacher();
-        $upload = $this->makeUpload($teacher, 'mine.txt');
+        $staff = $this->hqStaff();
+        $upload = $this->makeUpload($staff, 'mine.txt');
 
-        $this->actingAs($teacher)->delete(route('admin.uploads.destroy', $upload))->assertRedirect(route('admin.uploads'));
+        $this->actingAs($staff)->delete(route('admin.uploads.destroy', $upload))->assertRedirect(route('admin.uploads'));
         $upload->refresh();
         $this->assertTrue($upload->trashed());
         $this->assertFalse((bool) $upload->deleted_by_admin);
-        $this->assertSame($teacher->id, $upload->deleted_by);
+        $this->assertSame($staff->id, $upload->deleted_by);
 
-        $this->actingAs($teacher)->post(route('admin.uploads.restore', $upload))->assertRedirect(route('admin.uploads'));
+        $this->actingAs($staff)->post(route('admin.uploads.restore', $upload))->assertRedirect(route('admin.uploads'));
         $upload->refresh();
         $this->assertFalse($upload->trashed());
         $this->assertNull($upload->deleted_by);
         $this->assertFalse((bool) $upload->deleted_by_admin);
         Storage::disk('public')->assertExists($upload->stored_path);
-        $this->actingAs($teacher)->get($upload->publicPath())->assertOk();
+        $this->actingAs($staff)->get($upload->publicPath())->assertOk();
     }
 
     public function test_uploader_cannot_restore_a_file_an_admin_deleted(): void
     {
         $admin = $this->hqAdmin();
-        $teacher = $this->teacher();
-        $upload = $this->makeUpload($teacher, 'taken.txt');
+        $staff = $this->hqStaff();
+        $upload = $this->makeUpload($staff, 'taken.txt');
 
         $this->actingAs($admin)->delete(route('admin.uploads.destroy', $upload))->assertRedirect();
-        $this->actingAs($teacher)->post(route('admin.uploads.restore', $upload))->assertForbidden();
+        $this->actingAs($staff)->post(route('admin.uploads.restore', $upload))->assertForbidden();
         $this->assertTrue($upload->fresh()->trashed());
 
-        $html = $this->actingAs($teacher)->get(route('admin.uploads'))->assertOk()->getContent();
+        $html = $this->actingAs($staff)->get(route('admin.uploads'))->assertOk()->getContent();
         $this->assertStringContainsString('taken.txt', $html);
         $this->assertStringContainsString('Only an admin can restore this', $html);
         $this->assertStringNotContainsString(route('admin.uploads.restore', $upload), $html);
@@ -126,17 +126,17 @@ class UploadDeleteTest extends TestCase
     public function test_hq_admin_can_restore_a_file_deleted_by_themselves_or_the_uploader(): void
     {
         $admin = $this->hqAdmin();
-        $teacher = $this->teacher();
-        $byAdmin = $this->makeUpload($teacher, 'by-admin.txt');
-        $byTeacher = $this->makeUpload($teacher, 'by-teacher.txt');
+        $staff = $this->hqStaff();
+        $byAdmin = $this->makeUpload($staff, 'by-admin.txt');
+        $byStaff = $this->makeUpload($staff, 'by-staff.txt');
 
         $this->actingAs($admin)->delete(route('admin.uploads.destroy', $byAdmin))->assertRedirect();
-        $this->actingAs($teacher)->delete(route('admin.uploads.destroy', $byTeacher))->assertRedirect();
+        $this->actingAs($staff)->delete(route('admin.uploads.destroy', $byStaff))->assertRedirect();
 
         $this->actingAs($admin)->post(route('admin.uploads.restore', $byAdmin))->assertRedirect(route('admin.uploads'));
-        $this->actingAs($admin)->post(route('admin.uploads.restore', $byTeacher))->assertRedirect(route('admin.uploads'));
+        $this->actingAs($admin)->post(route('admin.uploads.restore', $byStaff))->assertRedirect(route('admin.uploads'));
         $this->assertFalse($byAdmin->fresh()->trashed());
-        $this->assertFalse($byTeacher->fresh()->trashed());
+        $this->assertFalse($byStaff->fresh()->trashed());
     }
 
     public function test_teacher_cannot_delete_someone_elses_file_or_one_with_no_uploader(): void
@@ -209,6 +209,26 @@ class UploadDeleteTest extends TestCase
         $this->assertFalse($upload->fresh()->trashed());
     }
 
+    public function test_base_commander_can_delete_and_restore_their_own_file(): void
+    {
+        $base = $this->baseCommander();
+        $upload = $this->makeUpload($base, 'base-mine.txt');
+        $upload->permissions()->create(['role' => 'base', 'mode' => 'always']);
+
+        $this->actingAs($base)->delete(route('admin.uploads.destroy', $upload))->assertRedirect(route('admin.uploads'));
+        $upload->refresh();
+        $this->assertTrue($upload->trashed());
+        $this->assertFalse((bool) $upload->deleted_by_admin);
+        $this->assertSame($base->id, $upload->deleted_by);
+
+        $this->actingAs($base)->post(route('admin.uploads.restore', $upload))->assertRedirect(route('admin.uploads'));
+        $upload->refresh();
+        $this->assertFalse($upload->trashed());
+        $this->assertNull($upload->deleted_by);
+        Storage::disk('public')->assertExists($upload->stored_path);
+        $this->actingAs($base)->get($upload->publicPath())->assertOk();
+    }
+
     protected function hqAdmin(): User
     {
         return User::factory()->create(['email' => 'hqadmin@example.org', 'role' => 'hq_admin']);
@@ -222,6 +242,11 @@ class UploadDeleteTest extends TestCase
     protected function teacher(): User
     {
         return User::factory()->create(['email' => 'teacher@example.org', 'role' => 'teacher']);
+    }
+
+    protected function baseCommander(): User
+    {
+        return User::factory()->create(['email' => 'base@example.org', 'role' => 'base']);
     }
 
     protected function makeUpload(User $actor, string $name, ?int $uploadedBy = -1): Upload

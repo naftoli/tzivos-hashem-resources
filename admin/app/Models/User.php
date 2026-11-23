@@ -32,7 +32,7 @@ class User extends Authenticatable
     public const PAGE_EDITORS = ['hq_admin', 'hq_staff'];
 
     /** Who may upload files */
-    public const UPLOADERS = ['hq_admin', 'hq_staff', 'teacher'];
+    public const UPLOADERS = ['hq_admin', 'hq_staff', 'teacher', 'base'];
 
     protected static function booted(): void
     {
@@ -123,6 +123,12 @@ class User extends Authenticatable
     public function canUpload(): bool
     {
         return in_array($this->role, self::UPLOADERS, true);
+    }
+
+    /** The News site level cannot use the admin site. */
+    public function canAccessAdminSite(): bool
+    {
+        return $this->role !== 'news';
     }
 
     public function isLastHqAdmin(): bool

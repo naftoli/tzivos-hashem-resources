@@ -146,12 +146,16 @@ class MashpiaRoleMappingTest extends TestCase
 
     public function test_other_levels_cannot_open_role_screens(): void
     {
-        foreach (['hq_staff', 'teacher', 'base', 'news'] as $role) {
+        foreach (['hq_staff', 'teacher', 'base'] as $role) {
             $user = User::factory()->create(['email' => "{$role}@example.org", 'role' => $role]);
             $this->actingAs($user)->get(route('admin.roles'))->assertForbidden();
             $this->actingAs($user)->get(route('admin.mashpia-roles'))->assertForbidden();
             $this->actingAs($user)->get(route('admin.admin-requests'))->assertForbidden();
         }
+        $news = User::factory()->create(['email' => 'news-blocked@example.org', 'role' => 'news']);
+        $this->actingAs($news)->get(route('admin.roles'))->assertRedirect(route('access.denied'));
+        $this->actingAs($news)->get(route('admin.mashpia-roles'))->assertRedirect(route('access.denied'));
+        $this->actingAs($news)->get(route('admin.admin-requests'))->assertRedirect(route('access.denied'));
     }
 
     public function test_map_cannot_assign_hq_admin(): void

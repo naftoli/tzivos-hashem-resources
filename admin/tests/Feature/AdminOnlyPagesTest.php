@@ -31,9 +31,8 @@ class AdminOnlyPagesTest extends TestCase
     {
         return [
             ['hq_staff', 'HQ staff'],
-            ['base', 'Base commanders'],
             ['teacher', 'Teachers'],
-            ['news', 'News site'],
+            ['base', 'Base commanders'],
         ];
     }
 
@@ -125,11 +124,14 @@ class AdminOnlyPagesTest extends TestCase
 
         $this->actingAs($teacher)->get(route('admin.pages'))->assertForbidden();
         $this->actingAs($teacher)->get(route('admin.uploads'))->assertOk();
+        $this->actingAs($teacher)->get(route('dashboard'))->assertOk();
 
         $this->actingAs($base)->get(route('admin.pages'))->assertForbidden();
-        $this->actingAs($base)->get(route('admin.uploads'))->assertForbidden();
+        $this->actingAs($base)->get(route('admin.uploads'))->assertOk();
+        $this->actingAs($base)->get(route('dashboard'))->assertOk();
 
-        $this->actingAs($news)->get(route('admin.pages'))->assertForbidden();
-        $this->actingAs($news)->get(route('admin.uploads'))->assertForbidden();
+        $this->actingAs($news)->get(route('dashboard'))->assertRedirect(route('access.denied'));
+        $this->actingAs($news)->get(route('admin.pages'))->assertRedirect(route('access.denied'));
+        $this->actingAs($news)->get(route('admin.uploads'))->assertRedirect(route('access.denied'));
     }
 }

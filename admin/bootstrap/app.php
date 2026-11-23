@@ -12,9 +12,18 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->redirectUsersTo(function (Request $request) {
+            $user = $request->user();
+            if ($user && ! $user->canAccessAdminSite()) {
+                return route('access.denied');
+            }
+
+            return route('dashboard');
+        });
         $middleware->alias([
             'hq' => \App\Http\Middleware\EnsureUserIsHQ::class,
             'role' => \App\Http\Middleware\EnsureUserHasRole::class,
+            'admin.site' => \App\Http\Middleware\EnsureUserCanAccessAdminSite::class,
         ]);
         // Page HTML must be saved exactly as typed
         $middleware->trimStrings(except: ['html']);

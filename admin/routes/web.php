@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\SiteController;
 use App\Http\Controllers\Api\PageController as ApiPageController;
 use App\Http\Controllers\Admin\UploadController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\NoAccessController;
 use App\Http\Controllers\PublicFileController;
 use Illuminate\Support\Facades\Route;
 
@@ -25,9 +26,12 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
+    Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
+    Route::get('/no-access', NoAccessController::class)->name('access.denied');
+
+    Route::middleware('admin.site')->group(function () {
     Route::view('/dashboard', 'dashboard')->name('dashboard');
     Route::get('/account', [\App\Http\Controllers\AccountController::class, 'show'])->name('account');
-    Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
     Route::post('/account/request-admin', [AdminAccessRequestController::class, 'store'])->name('account.request-admin');
 
     Route::middleware('hq')->group(function () {
@@ -59,7 +63,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/admin/search', [PageController::class, 'search'])->name('admin.pages.search');
     });
 
-    Route::middleware('role:hq_admin,hq_staff,teacher')->group(function () {
+    Route::middleware('role:hq_admin,hq_staff,teacher,base')->group(function () {
         Route::get('/admin/site-switcher', [SiteController::class, 'search'])->name('admin.sites.search');
         Route::post('/admin/site-switcher', [SiteController::class, 'switch'])->name('admin.sites.switch');
         Route::get('/admin/uploads', [UploadController::class, 'index'])->name('admin.uploads');
@@ -72,6 +76,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/admin/uploads/hebrew-date', [UploadController::class, 'hebrew'])->name('admin.uploads.hebrew');
         Route::get('/admin/uploads/site', [UploadController::class, 'siteParts'])->name('admin.uploads.site');
         Route::get('/admin/uploads/site/{key}', [UploadController::class, 'sitePart'])->name('admin.uploads.site.part');
+    });
     });
 });
 
