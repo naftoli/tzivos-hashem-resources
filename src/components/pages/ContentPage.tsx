@@ -2,7 +2,8 @@ import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent } from 'r
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { altCrumbBranch, hasPage, pageBranch } from '@/data/pageMeta';
-import { loadPageHtml, peekPageHtml } from '@/data/pageBodies';
+import { loadPageHtml, markPageOn, peekPageHtml } from '@/data/pageBodies';
+import { fetchRemotePageHtml } from '@/lib/siteApi';
 import { applyWeekState } from '@/lib/applyWeekState';
 import { hydrateImages } from '@/lib/hydrateImages';
 import { dispatchContentClick } from '@/lib/dispatchContentClick';
@@ -63,15 +64,22 @@ export function ContentPage({ pageId }: ContentPageProps) {
   // synchronous value and skip the loading state entirely; only a genuine
   // uncached `date`/`campaign` chunk fetch drops to `null` and shows it.
   useEffect(() => {
+    let alive = true;
+    let fromAdmin = false;
     const ready = peekPageHtml(pageId);
     if (ready != null) {
       setHtml(ready);
-      return;
+    } else {
+      setHtml(null);
+      loadPageHtml(pageId).then((h) => {
+        if (alive && !fromAdmin) setHtml(h ?? '');
+      });
     }
-    let alive = true;
-    setHtml(null);
-    loadPageHtml(pageId).then((h) => {
-      if (alive) setHtml(h ?? '');
+    // The admin's copy wins when it answers. If it doesn't, the built-in page stays.
+    fetchRemotePageHtml(pageId).then((remote) => {
+      if (!alive || remote == null) return;
+      fromAdmin = true;
+      setHtml(markPageOn(remote));
     });
     return () => {
       alive = false;

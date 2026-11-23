@@ -1,0 +1,37 @@
+<?php
+
+use Illuminate\Foundation\Application;
+use Illuminate\Foundation\Configuration\Exceptions;
+use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
+
+return Application::configure(basePath: dirname(__DIR__))
+    ->withRouting(
+        web: __DIR__.'/../routes/web.php',
+        commands: __DIR__.'/../routes/console.php',
+        health: '/up',
+    )
+    ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->redirectUsersTo(function (Request $request) {
+            $user = $request->user();
+            if ($user && ! $user->canAccessAdminSite()) {
+                return route('access.denied');
+            }
+
+            return route('dashboard');
+        });
+        $middleware->alias([
+            'hq' => \App\Http\Middleware\EnsureUserIsHQ::class,
+            'role' => \App\Http\Middleware\EnsureUserHasRole::class,
+            'admin.site' => \App\Http\Middleware\EnsureUserCanAccessAdminSite::class,
+        ]);
+        // Page HTML must be saved exactly as typed
+        $middleware->trimStrings(except: ['html']);
+        // Mashpia's own login cookie (only used if MASHPIA_AUTH_METHOD=session) is not ours to decrypt
+        $middleware->encryptCookies(except: ['PHPSESSID']);
+    })
+    ->withExceptions(function (Exceptions $exceptions): void {
+        $exceptions->shouldRenderJsonWhen(
+            fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
+        );
+    })->create();
