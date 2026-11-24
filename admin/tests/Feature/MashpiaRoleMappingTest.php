@@ -79,7 +79,10 @@ class MashpiaRoleMappingTest extends TestCase
         $this->assertSame('base', $open->fresh()->role);
         $this->post('/logout');
 
-        $this->getHandoff('/login/mashpia/return', $locked->email, 'Locked', 'Teacher')->assertRedirect();
+        $this->getHandoff('/login/mashpia/return', $locked->email, 'Locked', 'Teacher')
+            ->assertRedirect(route('login'))
+            ->assertSessionHasErrors('email');
+        $this->assertGuest();
         $fresh = $locked->fresh();
         $this->assertSame('news', $fresh->role);
         $this->assertSame('Teacher', $fresh->mashpia_role);
@@ -153,9 +156,10 @@ class MashpiaRoleMappingTest extends TestCase
             $this->actingAs($user)->get(route('admin.admin-requests'))->assertForbidden();
         }
         $news = User::factory()->create(['email' => 'news-blocked@example.org', 'role' => 'news']);
-        $this->actingAs($news)->get(route('admin.roles'))->assertRedirect(route('access.denied'));
-        $this->actingAs($news)->get(route('admin.mashpia-roles'))->assertRedirect(route('access.denied'));
-        $this->actingAs($news)->get(route('admin.admin-requests'))->assertRedirect(route('access.denied'));
+        $this->actingAs($news)->get(route('admin.roles'))->assertRedirect(route('login'));
+        $this->assertGuest();
+        $this->actingAs($news)->get(route('admin.mashpia-roles'))->assertRedirect(route('login'));
+        $this->actingAs($news)->get(route('admin.admin-requests'))->assertRedirect(route('login'));
     }
 
     public function test_map_cannot_assign_hq_admin(): void

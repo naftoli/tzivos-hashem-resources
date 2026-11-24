@@ -12,12 +12,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->web(append: [
+            \App\Http\Middleware\EnsureUserCanAccessAdminSite::class,
+        ]);
         $middleware->redirectUsersTo(function (Request $request) {
-            $user = $request->user();
-            if ($user && ! $user->canAccessAdminSite()) {
-                return route('access.denied');
-            }
-
             return route('dashboard');
         });
         $middleware->alias([

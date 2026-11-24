@@ -34,8 +34,7 @@ class LoginController extends Controller
         // Email + password works in every mode (owners and accounts created by an HQ admin
         // may not have a Mashpia login). Lookup is case-insensitive.
         if ($password !== '' && $user && Hash::check($password, $user->password)) {
-            Auth::login($user, $request->boolean('remember'));
-            return $this->afterLogin($request, $user);
+            return $this->completeLogin($request, $user, $request->boolean('remember'));
         }
 
         if (! $mashpia->enabled()) {
@@ -109,17 +108,24 @@ class LoginController extends Controller
         }
         app(MashpiaRoleMapper::class)->applyOnLogin($user, $mashpiaRole);
 
-        Auth::login($user, $remember);
-
-        return $this->afterLogin($request, $user);
+        return $this->completeLogin($request, $user, $remember);
     }
 
-    protected function afterLogin(Request $request, User $user)
+    /** News site accounts may not sign in to the admin. Their level is only for the public site. */
+    protected function completeLogin(Request $request, User $user, bool $remember)
     {
-        $request->session()->regenerate();
         if (! $user->canAccessAdminSite()) {
-            return redirect()->route('access.denied');
+            if (Auth::check()) {
+                Auth::logout();
+            }
+
+            return redirect()->route('login')
+                ->withErrors(['email' => \App\Http\Middleware\EnsureUserCanAccessAdminSite::MESSAGE])
+                ->onlyInput('email');
         }
+
+        Auth::login($user, $remember);
+        $request->session()->regenerate();
 
         return redirect()->intended(route('dashboard'));
     }
