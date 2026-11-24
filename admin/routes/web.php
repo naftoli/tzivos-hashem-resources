@@ -15,7 +15,7 @@ use App\Http\Controllers\PublicFileController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return view('welcome');
+    return redirect()->route('dashboard');
 });
 
 Route::middleware('guest')->group(function () {
