@@ -39,7 +39,9 @@ class ContentController extends Controller
             return response()->json(['message' => 'No page with that name.'], 404);
         }
 
-        $html = $this->links->rewrite($block->html, $this->uploads($site->id), $viewer->role);
+        $uploads = $this->uploads($site->id);
+        $html = $this->links->rewrite($block->html, $uploads, $viewer->role);
+        $html = $this->links->appendForPage($html, $uploads, $viewer->role, $block);
         ContentView::record($viewer, 'page', $this->title($html, $pageId), $pageId, null, $site->id);
 
         return response()->json(['id' => $pageId, 'html' => $html]);

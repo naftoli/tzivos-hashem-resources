@@ -126,6 +126,83 @@ class SiteContentApiTest extends TestCase
         $this->assertSame(0, ContentView::count());
     }
 
+    public function test_a_file_without_a_destination_still_replaces_the_matching_link(): void
+    {
+        $site = Site::where('slug', 'resources')->firstOrFail();
+        Storage::disk('public')->put('uploads/imported/video/Ab12Cd34-song.mp4', 'video');
+        $upload = Upload::create([
+            'site_id' => $site->id,
+            'original_name' => 'song.mp4',
+            'stored_path' => 'uploads/imported/video/Ab12Cd34-song.mp4',
+            'size' => 5,
+            'mime_type' => 'video/mp4',
+            'page_key' => 'i676niggun',
+            'uploaded_by' => User::factory()->create(['role' => 'hq_admin'])->id,
+        ]);
+        $upload->permissions()->create(['role' => 'teacher', 'mode' => 'always']);
+        $this->block('i676niggun', '<h2>Song</h2><a class="mediachip" href="video/song.mp4" target="_blank">Play</a>');
+
+        $html = $this->asPerson('ada@example.org', 'Teacher')
+            ->getJson('/api/content/pages/i676niggun')
+            ->assertOk()
+            ->json('html');
+
+        $this->assertStringContainsString('/resources/siteApi.php?file='.$upload->id, $html);
+        $this->assertStringContainsString('Play', $html);
+        $this->assertStringNotContainsString('video/song.mp4', $html);
+    }
+
+    public function test_a_new_upload_for_a_page_is_added_when_the_page_has_no_link_yet(): void
+    {
+        $site = Site::where('slug', 'resources')->firstOrFail();
+        Storage::disk('public')->put('uploads/home/extra.pdf', 'pdf');
+        $upload = Upload::create([
+            'site_id' => $site->id,
+            'original_name' => 'extra.pdf',
+            'stored_path' => 'uploads/home/extra.pdf',
+            'size' => 5,
+            'mime_type' => 'application/pdf',
+            'page_key' => 'home',
+            'uploaded_by' => User::factory()->create(['role' => 'hq_admin'])->id,
+        ]);
+        $upload->permissions()->create(['role' => 'teacher', 'mode' => 'always']);
+        $this->block('home', '<section class="page"><h1>Home</h1></section>');
+
+        $html = $this->asPerson('ada@example.org', 'Teacher')
+            ->getJson('/api/content/pages/home')
+            ->assertOk()
+            ->json('html');
+
+        $this->assertStringContainsString('uploaded-files', $html);
+        $this->assertStringContainsString('/resources/siteApi.php?file='.$upload->id, $html);
+        $this->assertStringContainsString('extra.pdf', $html);
+    }
+
+    public function test_a_pending_upload_is_not_added_to_the_page(): void
+    {
+        $site = Site::where('slug', 'resources')->firstOrFail();
+        Storage::disk('public')->put('uploads/home/waiting.txt', 'wait');
+        $upload = Upload::create([
+            'site_id' => $site->id,
+            'original_name' => 'waiting.txt',
+            'stored_path' => 'uploads/home/waiting.txt',
+            'size' => 4,
+            'mime_type' => 'text/plain',
+            'page_key' => 'home',
+            'approval_status' => 'pending',
+            'uploaded_by' => User::factory()->create(['role' => 'teacher'])->id,
+        ]);
+        $upload->permissions()->create(['role' => 'teacher', 'mode' => 'always']);
+        $this->block('home', '<section class="page"><h1>Home</h1></section>');
+
+        $html = $this->asPerson('ada@example.org', 'Teacher')
+            ->getJson('/api/content/pages/home')
+            ->assertOk()
+            ->json('html');
+
+        $this->assertStringNotContainsString('waiting.txt', $html);
+        $this->assertStringNotContainsString('file='.$upload->id, $html);
+    }
     private function asPerson(string $email, string $role)
     {
         return $this->withToken('site-token')->withHeaders([
