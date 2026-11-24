@@ -66,6 +66,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/admin/pages/{page}/blocks/{block}', [PageController::class, 'edit'])->name('admin.pages.block');
         Route::put('/admin/pages/{page}/blocks/{block}', [PageController::class, 'update'])->name('admin.pages.block.update');
         Route::put('/admin/pages/{page}/blocks/{block}/text', [PageController::class, 'updateText'])->name('admin.pages.block.text');
+        Route::post('/admin/pages/{page}/blocks/{block}/undo', [PageController::class, 'undo'])->name('admin.pages.block.undo');
         Route::get('/admin/search', [PageController::class, 'search'])->name('admin.pages.search');
     });
 

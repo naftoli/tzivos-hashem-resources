@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PageBlock extends Model
 {
@@ -19,6 +20,11 @@ class PageBlock extends Model
     public function editor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'edited_by');
+    }
+
+    public function revisions(): HasMany
+    {
+        return $this->hasMany(PageBlockRevision::class);
     }
 
     /** First h1/h2 text in the HTML, for display only (nothing is stored). */

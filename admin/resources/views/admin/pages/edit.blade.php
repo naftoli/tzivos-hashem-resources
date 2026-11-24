@@ -72,6 +72,7 @@
                 <span class="seg" style="margin-left:auto" title="Preview width"><button type="button" class="on" id="viewDesk">Desktop</button><button type="button" id="viewPhone">Phone</button></span>
             </div>
         </form>
+        <form id="undoForm" method="POST" action="{{ route('admin.pages.block.undo', [$page, $block]) }}" hidden>@csrf</form>
 
         <div class="card-body">
             <div class="help" id="helpWords">Click on any words below and type to change them. Only the words change; the layout stays the same. Links and buttons don't open here. When you're done, press <b>Save</b>.</div>
@@ -102,6 +103,7 @@
     (function () {
         const TEXTS = @json($texts);
         const LOCKED = new Set(@json(array_values($locked ?? [])));
+        const SAVED_UNDO = @json((int) ($savedUndo ?? 0));
         const MARKED = @json($marked);
         const GROUP_SIZES = @json($groupSizes);
         const ELS = @json($elInfo); // per element that can be nudged: [tag, style without our nudge (null = none), x, y, kind]
@@ -228,7 +230,7 @@
             for (const i in editors) editors[i].classList.toggle(editors[i].tagName === 'INPUT' ? 'changed' : 'tzh-changed', i in ch);
             saveBtn.disabled = n === 0;
             undoBtn.disabled = n === 0;
-            stepUndo.disabled = past.length === 0;
+            stepUndo.disabled = past.length === 0 && SAVED_UNDO === 0;
             stepRedo.disabled = future.length === 0;
             countEl.textContent = n === 0 ? 'No changes yet.' : n + (n === 1 ? ' change' : ' changes') + ' not saved yet.';
             return [ch, or, nu];
@@ -314,7 +316,11 @@
             if (!typing) { checkpoint(); typing = true; }
             clearTimeout(typingTimer); typingTimer = setTimeout(endTyping, 1200);
         }
-        function undoStep() { endTyping(); if (!past.length) return; future.push(snapshot()); restore(past.pop()); moved(); }
+        function undoStep() {
+            endTyping();
+            if (past.length) { future.push(snapshot()); restore(past.pop()); moved(); return; }
+            if (SAVED_UNDO > 0) { submitting = true; document.getElementById('undoForm').submit(); }
+        }
         function redoStep() { endTyping(); if (!future.length) return; past.push(snapshot()); restore(future.pop()); moved(); }
         function historyKeys(e) {
             if (!(e.ctrlKey || e.metaKey) || e.altKey) return;

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Page;
 use App\Models\PageBlock;
+use App\Models\PageBlockRevision;
 use App\Support\AutoWeekFields;
 use App\Support\HtmlLayout;
 use App\Support\HtmlMove;
@@ -69,6 +70,7 @@ class PageController extends Controller
     public function edit(Page $page, PageBlock $block)
     {
         abort_unless($block->page_id === $page->id, 404);
+        PageBlockRevision::purgeExpired();
         $segments = HtmlText::segments($block->html);
         $groups = HtmlLayout::groups($block->html);
         $els = HtmlMove::elements($block->html);
@@ -80,6 +82,7 @@ class PageController extends Controller
             'groupSizes' => array_map(fn ($g) => count($g['items']), $groups),
             'texts' => array_column($segments, 'text'),
             'locked' => AutoWeekFields::segmentIndexes($block->html, $segments),
+            'savedUndo' => $block->revisions()->stillUndoable()->count(),
             'base' => hash('sha256', $block->html),
         ]);
     }
@@ -121,10 +124,26 @@ class PageController extends Controller
         return $this->store($request, $page, $block, $html, false);
     }
 
+    /** Undo the most recent saved change to this part, if it was made in the last 24 hours. */
+    public function undo(Page $page, PageBlock $block)
+    {
+        abort_unless($block->page_id === $page->id, 404);
+        PageBlockRevision::purgeExpired();
+        $revision = $block->revisions()->stillUndoable()->orderByDesc('id')->first();
+        if (! $revision) {
+            return redirect()->route('admin.pages.block', [$page, $block])->with('status', 'Nothing to undo.');
+        }
+        $block->update(['html' => $revision->html, 'edited_at' => now(), 'edited_by' => request()->user()->id]);
+        $revision->delete();
+
+        return redirect()->route('admin.pages.block', [$page, $block])->with('status', 'Undone.');
+    }
+
     private function store(Request $request, Page $page, PageBlock $block, string $html, bool $code)
     {
         $html = AutoWeekFields::preserve($block->html, $html);
         if ($html !== $block->html) {
+            PageBlockRevision::record($block, $block->html, $request->user()->id);
             $block->update(['html' => $html, 'edited_at' => now(), 'edited_by' => $request->user()->id]);
             $msg = 'Saved.';
         } else {
