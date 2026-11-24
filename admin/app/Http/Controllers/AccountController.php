@@ -16,4 +16,27 @@ class AccountController extends Controller
             'uploads' => Upload::with(['permissions', 'pageBlock.page', 'site'])->where('uploaded_by', $user->id)->latest()->get(),
         ]);
     }
+
+    public function editPassword()
+    {
+        return view('account-password');
+    }
+
+    public function updatePassword(Request $request)
+    {
+        $data = $request->validate([
+            'current_password' => ['required', 'current_password'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ], [
+            'current_password.required' => 'Type your current password.',
+            'current_password.current_password' => 'The current password is incorrect.',
+            'password.required' => 'Type a new password.',
+            'password.min' => 'The new password must be at least 8 characters.',
+            'password.confirmed' => 'The new password and confirmation did not match.',
+        ]);
+
+        $request->user()->update(['password' => $data['password']]);
+
+        return redirect()->route('account.password')->with('status', 'Your password was changed.');
+    }
 }

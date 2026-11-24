@@ -87,10 +87,9 @@
         .top a.me:hover b { color: var(--blue); }
         .top .me-menu { display: none; position: absolute; right: 0; top: 100%; padding-top: 6px; min-width: 170px; z-index: 50; }
         .top .me-wrap:hover .me-menu, .top .me-wrap:focus-within .me-menu { display: block; }
+        .top .me-menu-inner { background: #fff; border-radius: 8px; box-shadow: 0 6px 20px rgba(82,63,105,.12); overflow: hidden; }
         .top .me-menu a, .top .me-menu button { display: block; width: 100%; text-align: left; padding: 10px 16px; background: #fff; border: 0; font: inherit; font-weight: 500; color: #3f4254; cursor: pointer; text-decoration: none; }
-        .top .me-menu a { border-radius: 8px 8px 0 0; box-shadow: 0 6px 20px rgba(82,63,105,.12); }
         .top .me-menu form { margin: 0; }
-        .top .me-menu button { border-radius: 0 0 8px 8px; box-shadow: 0 10px 20px rgba(82,63,105,.12); }
         .top .me-menu a:hover, .top .me-menu button:hover { background: #f3f6f9; color: var(--blue); }
         .site-sw { position: relative; }
         .site-sw .site-btn { display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; border: 1px solid #e4e6ef; border-radius: 8px; background: #fff; font: inherit; color: #3f4254; cursor: pointer; white-space: nowrap; max-width: 260px; }
@@ -203,10 +202,13 @@
             <div class="spacer"></div>
         @endif
         <div class="me-wrap">
-            <a class="me @if (request()->routeIs('account')) on @endif" href="{{ route('account') }}" title="My dashboard">Hi, <b>{{ $u->name }}</b><span class="avatar">{{ mb_substr($u->name ?: $u->email, 0, 1) }}</span></a>
+            <a class="me @if (request()->routeIs('account') || request()->routeIs('account.password')) on @endif" href="{{ route('account') }}" title="My dashboard">Hi, <b>{{ $u->name }}</b><span class="avatar">{{ mb_substr($u->name ?: $u->email, 0, 1) }}</span></a>
             <div class="me-menu">
-                <a href="{{ route('account') }}">My dashboard</a>
-                <form method="POST" action="{{ route('logout') }}">@csrf<button type="submit">Sign out</button></form>
+                <div class="me-menu-inner">
+                    <a href="{{ route('account') }}">My dashboard</a>
+                    <a href="{{ route('account.password') }}">Change password</a>
+                    <form method="POST" action="{{ route('logout') }}">@csrf<button type="submit">Sign out</button></form>
+                </div>
             </div>
         </div>
     </header>

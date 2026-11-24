@@ -34,6 +34,8 @@ Route::middleware('auth')->group(function () {
     Route::middleware('admin.site')->group(function () {
     Route::view('/dashboard', 'dashboard')->name('dashboard');
     Route::get('/account', [\App\Http\Controllers\AccountController::class, 'show'])->name('account');
+    Route::get('/account/password', [\App\Http\Controllers\AccountController::class, 'editPassword'])->name('account.password');
+    Route::post('/account/password', [\App\Http\Controllers\AccountController::class, 'updatePassword'])->name('account.password.update');
     Route::post('/account/request-admin', [AdminAccessRequestController::class, 'store'])->name('account.request-admin');
 
     Route::middleware('hq')->group(function () {
