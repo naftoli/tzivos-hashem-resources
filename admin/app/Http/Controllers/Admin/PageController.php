@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Page;
 use App\Models\PageBlock;
+use App\Support\AutoWeekFields;
 use App\Support\HtmlLayout;
 use App\Support\HtmlMove;
 use App\Support\HtmlText;
@@ -78,6 +79,7 @@ class PageController extends Controller
             'elInfo' => HtmlMove::info($els),
             'groupSizes' => array_map(fn ($g) => count($g['items']), $groups),
             'texts' => array_column($segments, 'text'),
+            'locked' => AutoWeekFields::segmentIndexes($block->html, $segments),
             'base' => hash('sha256', $block->html),
         ]);
     }
@@ -109,6 +111,7 @@ class PageController extends Controller
         if (! is_array($changes) || ! is_array($orders) || ! is_array($nudges)) {
             return back()->withErrors(['changes' => 'Nothing was saved (the changes could not be read).']);
         }
+        $changes = AutoWeekFields::withoutLockedChanges($block->html, $changes);
         try {
             $html = HtmlText::apply($block->html, $changes, $orders, $nudges);
         } catch (\InvalidArgumentException $e) {
@@ -120,6 +123,7 @@ class PageController extends Controller
 
     private function store(Request $request, Page $page, PageBlock $block, string $html, bool $code)
     {
+        $html = AutoWeekFields::preserve($block->html, $html);
         if ($html !== $block->html) {
             $block->update(['html' => $html, 'edited_at' => now(), 'edited_by' => $request->user()->id]);
             $msg = 'Saved.';

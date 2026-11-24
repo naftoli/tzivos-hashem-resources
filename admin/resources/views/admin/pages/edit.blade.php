@@ -101,6 +101,7 @@
     <script>
     (function () {
         const TEXTS = @json($texts);
+        const LOCKED = new Set(@json(array_values($locked ?? [])));
         const MARKED = @json($marked);
         const GROUP_SIZES = @json($groupSizes);
         const ELS = @json($elInfo); // per element that can be nudged: [tag, style without our nudge (null = none), x, y, kind]
@@ -437,6 +438,7 @@
             for (const [c, i] of marks) {
                 const t = c.nextSibling;
                 c.remove();
+                if (LOCKED.has(i)) { found.add(i); continue; }
                 if (t && t.nodeType === 3 && t.data === TEXTS[i]) {
                     const s = d.createElement('span');
                     s.className = 'tzh-edit';
