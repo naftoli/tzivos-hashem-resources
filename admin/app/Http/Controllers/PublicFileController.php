@@ -53,7 +53,7 @@ class PublicFileController extends Controller
         }
         $grantedRole = app(FileGrant::class)->roleFromRequest($request, $upload);
         if ($grantedRole !== null) {
-            if (! $upload->visibleToRole($grantedRole)) {
+            if (! $upload->isApproved() || ! $upload->visibleToRole($grantedRole)) {
                 return response()->view('errors.access-denied', ['message' => "You don't have access to this file right now."], 403);
             }
 
@@ -62,7 +62,16 @@ class PublicFileController extends Controller
         if (! $request->user()) {
             return redirect()->guest(route('login'));
         }
-        if (! $upload->visibleTo($request->user())) {
+        $user = $request->user();
+        if (! $upload->isApproved()) {
+            $mayPreview = $user->isHQAdmin() || (int) $upload->uploaded_by === (int) $user->id;
+            if (! $mayPreview) {
+                return response()->view('errors.access-denied', ['message' => "You don't have access to this file right now."], 403);
+            }
+
+            return $this->bytes($upload);
+        }
+        if (! $upload->visibleTo($user)) {
             return response()->view('errors.access-denied', ['message' => "You don't have access to this file right now."], 403);
         }
         return $this->bytes($upload);

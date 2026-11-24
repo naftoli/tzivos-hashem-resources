@@ -31,7 +31,7 @@ class PageFileLinker
                 if (! $upload) {
                     return $m[0];
                 }
-                if (! $upload->visibleToRole($role)) {
+                if (! $upload->isApproved() || ! $upload->visibleToRole($role)) {
                     return '';
                 }
                 $href = $proxy.'?file='.$upload->id;

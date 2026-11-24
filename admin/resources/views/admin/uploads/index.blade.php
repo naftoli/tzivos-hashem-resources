@@ -43,6 +43,43 @@
         </div>
     </div>
 
+    @if (isset($pendingUploads) && $pendingUploads->count())
+    <div class="card">
+        <div class="card-head"><h2>Waiting for approval</h2><span class="sub">{{ $pendingUploads->count() }} total</span></div>
+        <div class="card-body" style="padding-top:6px">
+            <p style="margin:0 0 12px;color:#7e8299">These files were uploaded by a teacher. They will not show on the site until you approve them.</p>
+            <table class="tbl">
+                <thead>
+                    <tr><th>File</th><th>Type</th><th>Page on the site</th><th>Uploaded by</th><th class="num">Actions</th></tr>
+                </thead>
+                <tbody>
+                @foreach ($pendingUploads as $upload)
+                    <tr class="row">
+                        <td class="primary" style="word-break:break-all">{{ $upload->original_name }} <span class="pill orange">Waiting for approval</span></td>
+                        <td><span class="pill {{ $upload->file_type ? 'purple' : 'grey' }}">{{ $upload->typeLabel() }}</span></td>
+                        <td style="word-break:break-all">{{ $upload->pageLabel() ?? $upload->page_key }}</td>
+                        <td>{{ $upload->uploader?->email ?? 'Unknown' }}</td>
+                        <td class="acts" style="white-space:nowrap">
+                            <a class="act green" href="{{ $upload->publicUrl() }}" target="_blank" title="Open {{ $upload->publicPath() }}"><svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6M10 14L21 3"/></svg></a>
+                            @if ($upload->canBeApprovedBy(auth()->user()))
+                                <form method="POST" action="{{ route('admin.uploads.approve', $upload) }}" style="display:inline;margin:0">
+                                    @csrf
+                                    <button type="submit" class="act text" title="Approve {{ $upload->original_name }}">Approve</button>
+                                </form>
+                                <form method="POST" action="{{ route('admin.uploads.reject', $upload) }}" style="display:inline;margin:0">
+                                    @csrf
+                                    <button type="submit" class="act text red" title="Reject {{ $upload->original_name }}">Reject</button>
+                                </form>
+                            @endif
+                        </td>
+                    </tr>
+                @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+    @endif
+
     <div class="card">
         <div class="card-head"><h2>Uploaded files</h2><span class="sub">{{ $uploads->count() }} total</span></div>
         <div class="card-body" style="padding-top:6px">
@@ -60,7 +97,7 @@
                 <tbody>
                 @forelse ($uploads as $upload)
                     <tr class="row">
-                        <td class="primary" style="word-break:break-all">{{ $upload->original_name }}</td>
+                        <td class="primary" style="word-break:break-all">{{ $upload->original_name }}@if ($upload->isPending()) <span class="pill orange">Waiting for approval</span>@elseif ($upload->isRejected()) <span class="pill grey">Rejected</span>@endif</td>
                         <td><span class="pill {{ $upload->file_type ? 'purple' : 'grey' }}">{{ $upload->typeLabel() }}</span></td>
                         <td class="num">{{ $upload->humanSize() }}</td>
                         <td style="word-break:break-all">

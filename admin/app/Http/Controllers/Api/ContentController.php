@@ -77,7 +77,7 @@ class ContentController extends Controller
 
         $proxy = rtrim((string) config('admin.site_api'), '?');
         foreach ($this->uploads($site->id) as $upload) {
-            if (mb_stripos($upload->original_name, $q) === false || ! $upload->visibleToRole($viewer->role)) {
+            if (! $upload->isApproved() || mb_stripos($upload->original_name, $q) === false || ! $upload->visibleToRole($viewer->role)) {
                 continue;
             }
             $results[] = [
@@ -104,7 +104,7 @@ class ContentController extends Controller
         if ($viewer instanceof \Illuminate\Http\JsonResponse) {
             return $viewer;
         }
-        if ($upload->trashed() || ! $upload->visibleToRole($viewer->role)) {
+        if ($upload->trashed() || ! $upload->isApproved() || ! $upload->visibleToRole($viewer->role)) {
             return response()->json(['message' => "You don't have access to this file right now."], 403);
         }
 
@@ -131,7 +131,7 @@ class ContentController extends Controller
     /** @return \Illuminate\Support\Collection<int, Upload> */
     private function uploads(int $siteId)
     {
-        return Upload::with('permissions')->where('site_id', $siteId)->orderByDesc('id')->get();
+        return Upload::with('permissions')->where('site_id', $siteId)->where('approval_status', Upload::APPROVAL_APPROVED)->orderByDesc('id')->get();
     }
 
     private function title(string $html, string $fallback): string

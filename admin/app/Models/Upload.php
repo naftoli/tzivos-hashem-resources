@@ -12,7 +12,11 @@ class Upload extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = ['site_id', 'original_name', 'stored_path', 'size', 'mime_type', 'page_url', 'page_key', 'page_block_id', 'destination', 'uploaded_by', 'file_type', 'deleted_by', 'deleted_by_admin'];
+    public const APPROVAL_PENDING = 'pending';
+    public const APPROVAL_APPROVED = 'approved';
+    public const APPROVAL_REJECTED = 'rejected';
+
+    protected $fillable = ['site_id', 'original_name', 'stored_path', 'size', 'mime_type', 'page_url', 'page_key', 'page_block_id', 'destination', 'uploaded_by', 'file_type', 'approval_status', 'deleted_by', 'deleted_by_admin'];
 
     protected $casts = [
         'deleted_at' => 'datetime',
@@ -110,6 +114,31 @@ class Upload extends Model
     public function pageLabel(): ?string
     {
         return $this->pageBlock ? SiteUrl::label($this->pageBlock->loadMissing('page')) : null;
+    }
+
+    public static function approvalStatusFor(User $user): string
+    {
+        return $user->role === 'teacher' ? self::APPROVAL_PENDING : self::APPROVAL_APPROVED;
+    }
+
+    public function isApproved(): bool
+    {
+        return ($this->approval_status ?: self::APPROVAL_APPROVED) === self::APPROVAL_APPROVED;
+    }
+
+    public function isPending(): bool
+    {
+        return $this->approval_status === self::APPROVAL_PENDING;
+    }
+
+    public function isRejected(): bool
+    {
+        return $this->approval_status === self::APPROVAL_REJECTED;
+    }
+
+    public function canBeApprovedBy(?User $user): bool
+    {
+        return $user && $user->isHQAdmin() && $this->isPending();
     }
 
     /** May this signed-in user open the file right now? HQ admin always can. */

@@ -27,9 +27,25 @@ class UploadController extends Controller
             $deleted->where('uploaded_by', $user->id);
         }
 
+        $all = Upload::with(['uploader', 'permissions', 'pageBlock.page'])->where('site_id', $siteId)->latest()->get();
+        $pendingUploads = $user->isHQAdmin()
+            ? $all->filter(fn (Upload $u) => $u->isPending())->values()
+            : collect();
+        $uploads = $all->filter(function (Upload $u) use ($user) {
+            if ($u->isPending()) {
+                return ! $user->isHQAdmin() && (int) $u->uploaded_by === (int) $user->id;
+            }
+            if ($u->isRejected()) {
+                return $user->isHQAdmin() || (int) $u->uploaded_by === (int) $user->id;
+            }
+
+            return true;
+        })->values();
+
         return view('admin.uploads.index', [
             'site' => CurrentSite::get(),
-            'uploads' => Upload::with(['uploader', 'permissions', 'pageBlock.page'])->where('site_id', $siteId)->latest()->get(),
+            'uploads' => $uploads,
+            'pendingUploads' => $pendingUploads,
             'deletedUploads' => $deleted->get(),
             'perms' => $this->formDefaults(null),
         ]);
@@ -63,14 +79,34 @@ class UploadController extends Controller
                     'page_block_id' => $this->pickedBlock($request, $page),
                     'uploaded_by' => $request->user()->id,
                     'file_type' => $request->input('file_type'),
+                    'approval_status' => Upload::approvalStatusFor($request->user()),
                 ]);
                 $upload->permissions()->createMany($rows);
                 $saved++;
             }
         });
 
-        return redirect()->route('admin.uploads')
-            ->with('status', "Uploaded {$saved} file(s) for " . SiteUrl::label($page['block']) . '.');
+        $status = Upload::approvalStatusFor($request->user()) === Upload::APPROVAL_PENDING
+            ? "Uploaded {$saved} file(s) for " . SiteUrl::label($page['block']) . '. They will show on the site after an HQ admin approves them.'
+            : "Uploaded {$saved} file(s) for " . SiteUrl::label($page['block']) . '.';
+
+        return redirect()->route('admin.uploads')->with('status', $status);
+    }
+
+    public function approve(Request $request, Upload $upload)
+    {
+        abort_unless($upload->canBeApprovedBy($request->user()), 403);
+        $upload->update(['approval_status' => Upload::APPROVAL_APPROVED]);
+
+        return redirect()->route('admin.uploads')->with('status', "Approved {$upload->original_name}. It can now show on the site.");
+    }
+
+    public function reject(Request $request, Upload $upload)
+    {
+        abort_unless($upload->canBeApprovedBy($request->user()), 403);
+        $upload->update(['approval_status' => Upload::APPROVAL_REJECTED]);
+
+        return redirect()->route('admin.uploads')->with('status', "Rejected {$upload->original_name}. It will not show on the site.");
     }
 
     public function edit(Request $request, Upload $upload)
