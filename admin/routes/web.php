@@ -56,6 +56,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/admin/sites/{site}/edit', [SiteController::class, 'edit'])->name('admin.sites.edit');
         Route::put('/admin/sites/{site}', [SiteController::class, 'update'])->name('admin.sites.update');
         Route::get('/admin/login-settings', fn () => view('admin.login-settings', ['mode' => app(\App\Services\MashpiaAuthService::class)->mode()]))->name('admin.login-settings');
+        Route::get('/admin/files', [\App\Http\Controllers\Admin\FileDashboardController::class, 'index'])->name('admin.files');
+        Route::put('/admin/files', [\App\Http\Controllers\Admin\FileDashboardController::class, 'update'])->name('admin.files.update');
+        Route::delete('/admin/files', [\App\Http\Controllers\Admin\FileDashboardController::class, 'clear'])->name('admin.files.clear');
         Route::get('/admin/stats', [StatsController::class, 'index'])->name('admin.stats');
         Route::get('/admin/stats.csv', [StatsController::class, 'csv'])->name('admin.stats.csv');
     });
@@ -68,6 +71,11 @@ Route::middleware('auth')->group(function () {
         Route::put('/admin/pages/{page}/blocks/{block}/text', [PageController::class, 'updateText'])->name('admin.pages.block.text');
         Route::post('/admin/pages/{page}/blocks/{block}/undo', [PageController::class, 'undo'])->name('admin.pages.block.undo');
         Route::get('/admin/search', [PageController::class, 'search'])->name('admin.pages.search');
+        Route::get('/admin/pages/{page}/blocks/{block}/files', [\App\Http\Controllers\Admin\PageFileController::class, 'index'])->name('admin.pages.block.files');
+        Route::put('/admin/pages/{page}/blocks/{block}/files', [\App\Http\Controllers\Admin\PageFileController::class, 'update'])->name('admin.pages.block.files.update');
+        Route::post('/admin/pages/{page}/blocks/{block}/files/remove', [\App\Http\Controllers\Admin\PageFileController::class, 'remove'])->name('admin.pages.block.files.remove');
+        Route::delete('/admin/pages/{page}/blocks/{block}/files', [\App\Http\Controllers\Admin\PageFileController::class, 'clear'])->name('admin.pages.block.files.clear');
+        Route::post('/admin/pages/{page}/blocks/{block}/files/restore', [\App\Http\Controllers\Admin\PageFileController::class, 'restore'])->name('admin.pages.block.files.restore');
     });
 
     Route::middleware('role:hq_admin,hq_staff,teacher,base')->group(function () {

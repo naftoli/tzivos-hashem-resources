@@ -36,7 +36,7 @@
                         <td>{{ $block->heading() }}</td>
                         <td class="num">{{ number_format(mb_strlen($block->html, 'UTF-8')) }} chars</td>
                         <td>@if ($block->edited_at)<span class="pill orange">edited</span>@else<span class="pill">original</span>@endif</td>
-                        <td class="acts"><a class="act" href="{{ route('admin.pages.block', [$page, $block]) }}" title="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></a></td>
+                        <td class="acts"><a class="act" href="{{ route('admin.pages.block.files', [$page, $block]) }}" title="Files"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></a><a class="act" href="{{ route('admin.pages.block', [$page, $block]) }}" title="Edit"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></a></td>
                     </tr>
                 @empty
                     <tr><td colspan="5" class="empty">Nothing found.</td></tr>

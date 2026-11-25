@@ -48,7 +48,7 @@
                     @endif
                 </div>
             </div>
-            <nav class="tabs modes"><button type="button" class="mode on" id="modeWords">Change words</button><button type="button" class="mode" id="modeMove">Move things</button></nav>
+            <nav class="tabs modes"><button type="button" class="mode on" id="modeWords">Change words</button><button type="button" class="mode" id="modeMove">Move things</button><a class="mode" href="{{ route('admin.pages.block.files', [$page, $block]) }}">Files</a></nav>
         </div>
 
         <form id="textForm" method="POST" action="{{ route('admin.pages.block.text', [$page, $block]) }}" style="margin:0">

@@ -22,6 +22,11 @@ class PageBlock extends Model
         return $this->belongsTo(User::class, 'edited_by');
     }
 
+    public function fileRules(): HasMany
+    {
+        return $this->hasMany(PageFileRule::class);
+    }
+
     public function revisions(): HasMany
     {
         return $this->hasMany(PageBlockRevision::class);

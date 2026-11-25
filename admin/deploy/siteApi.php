@@ -63,7 +63,8 @@ if (isset($_GET['q'])) {
     proxy_json($admin . '/api/content/search?q=' . rawurlencode($_GET['q']), $headers);
 }
 if (isset($_GET['file']) && ctype_digit((string) $_GET['file'])) {
-    list($code, $body) = admin_call($admin . '/api/content/files/' . $_GET['file'], $headers);
+    $download = isset($_GET['download']) && $_GET['download'] === '1' ? '?download=1' : '';   // the admin checks who may download
+    list($code, $body) = admin_call($admin . '/api/content/files/' . $_GET['file'] . $download, $headers);
     $data = json_decode($body, true);
     if ($code === 200 && is_array($data) && !empty($data['url'])) {
         header('Location: ' . $data['url']);
