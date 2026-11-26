@@ -108,7 +108,7 @@ class PageFileControlsTest extends TestCase
         $html = $this->pageAs('teach@example.org');
 
         $this->assertStringContainsString('<div class="hachayolbar"><span class="hb-l">Hachayol</span><span class="hb-i">Hachayol #666 · Parshas Noach</span>'
-            .'<a class="hb-a" href="pdfs/666.pdf" target="_blank" rel="noopener">View PDF &#8599;</a>'
+            .'<a class="hb-a" href="/resources/siteApi.php?pdf=pdfs%2F666.pdf" data-pdfview>View PDF</a>'
             .'<a class="hb-a" href="pdfs/666.pdf" download>Download PDF</a></div>', $html);
         $this->assertStringNotContainsString('Printable PDF', $html);
     }
@@ -135,11 +135,16 @@ class PageFileControlsTest extends TestCase
 
         // the page points View and Download at the file address; Download asks for the download
         $html = $this->pageAs('staff@example.org');
-        $this->assertStringContainsString('href="/resources/siteApi.php?file='.$upload->id.'" target="_blank" rel="noopener">View PDF', $html);
+        $this->assertStringContainsString('href="/resources/siteApi.php?file='.$upload->id.'&amp;view=1" data-pdfview>View PDF', $html);
         $this->assertStringContainsString('href="/resources/siteApi.php?file='.$upload->id.'&amp;download=1" download>Download PDF', $html);
 
         $this->asPerson('teach@example.org')->getJson('/api/content/files/'.$upload->id.'?download=1')->assertStatus(403);
-        $this->asPerson('teach@example.org')->getJson('/api/content/files/'.$upload->id)->assertOk();
+        // a level that may only view gets the file only through the site's reader, never a file address
+        $this->asPerson('teach@example.org')->getJson('/api/content/files/'.$upload->id)->assertStatus(403);
+        $read = $this->asPerson('teach@example.org')->get('/api/content/files/'.$upload->id.'?view=1')->assertOk();
+        $this->assertSame('inline', $read->headers->get('Content-Disposition'));
+        $this->assertStringContainsString('no-store', $read->headers->get('Cache-Control'));
+        $this->assertStringContainsString('application/pdf', $read->headers->get('Content-Type'));
 
         $url = $this->asPerson('staff@example.org')->getJson('/api/content/files/'.$upload->id.'?download=1')->assertOk()->json('url');
         $this->assertStringContainsString('dl=1', $url);
@@ -147,7 +152,7 @@ class PageFileControlsTest extends TestCase
         $this->assertStringStartsWith('attachment;', $res->headers->get('Content-Disposition'));
 
         // a view address cannot be turned into a download one
-        $view = $this->asPerson('teach@example.org')->getJson('/api/content/files/'.$upload->id)->json('url');
+        $view = $this->asPerson('staff@example.org')->getJson('/api/content/files/'.$upload->id)->json('url');
         $this->get($view.'&dl=1')->assertRedirect(route('login'));   // signature no longer matches: not handed out
         $this->assertStringStartsWith('inline;', $this->get($view)->headers->get('Content-Disposition'));
     }
@@ -377,6 +382,24 @@ class PageFileControlsTest extends TestCase
         $staff = User::where('email', 'staff@example.org')->first();
         $this->actingAs($staff)->putJson(route('admin.files.visibility.update'), ['full' => false])->assertStatus(403);
         $this->assertStringContainsString('hachayolbar', $this->pageAs('teach@example.org'));
+    }
+
+    public function test_view_pdf_is_checked_before_the_site_sends_the_file(): void
+    {
+        $this->asPerson('teach@example.org')->getJson('/api/content/bar?href=pdfs/666.pdf')->assertOk();
+        $this->asPerson('teach@example.org')->getJson('/api/content/bar?href=pdfs/999.pdf')->assertStatus(404);
+        $this->asPerson('teach@example.org')->getJson('/api/content/bar?href=../.env')->assertStatus(404);
+
+        PageFileRule::create(['page_block_id' => $this->block->id, 'ref' => 'link:pdfs/666.pdf', 'roles' => ['hq_staff']]);
+        $this->asPerson('teach@example.org')->getJson('/api/content/bar?href=pdfs/666.pdf')->assertStatus(403);
+        $this->asPerson('staff@example.org')->getJson('/api/content/bar?href=pdfs/666.pdf')->assertOk();
+    }
+
+    public function test_the_whole_hachayol_setting_counts_for_view_pdf(): void
+    {
+        $this->saveScope(['scope' => 'issue', 'key' => '666', 'roles' => ['hq_staff']])->assertRedirect();
+        $this->asPerson('teach@example.org')->getJson('/api/content/bar?href=pdfs/666.pdf')->assertStatus(403);
+        $this->asPerson('staff@example.org')->getJson('/api/content/bar?href=pdfs/666.pdf')->assertOk();
     }
 
     private function importedPdf(): Upload

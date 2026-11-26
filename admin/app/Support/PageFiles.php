@@ -81,7 +81,7 @@ class PageFiles
     }
 
     /**
-     * The Hachayol bar's one "Printable PDF" link becomes two: View (opens it) and Download.
+     * The Hachayol bar's one "Printable PDF" link becomes two: View (opens it in the site's reader) and Download.
      * Download is only put in for levels allowed to download it; the whole bar goes for levels that may not see that issue.
      *
      * @param Collection<string, PageFileRule> $byRef
@@ -101,7 +101,8 @@ class PageFiles
                     return '';
                 }
                 $inner = preg_replace('/<span class="hb-a">.*?<\/span>/s', '', $m[2]) ?? $m[2];
-                $view = '<a class="hb-a" href="'.$href.'" target="_blank" rel="noopener">View PDF &#8599;</a>';
+                // View opens the site's own reader (no download, save or print); see viewLinks()
+                $view = '<a class="hb-a" href="'.$href.'" data-pdfview>View PDF</a>';
                 $download = (! $access || $access->canDownload($role))
                     ? '<a class="hb-a" href="'.$href.'" download>Download PDF</a>'
                     : '';
@@ -110,6 +111,34 @@ class PageFiles
             },
             $html
         ) ?? $html;
+    }
+
+    /**
+     * View PDF links point at siteApi.php, which sends the PDF only to the site's reader:
+     * an uploaded file (already ?file=ID&view=1) stays; a file on the site becomes ?pdf=<path>.
+     * The reader asks with a header a plain link can't send, so the address alone doesn't open the file.
+     */
+    public static function viewLinks(string $html, string $proxy): string
+    {
+        return preg_replace_callback(
+            '/<a class="hb-a" href="([^"]+)" data-pdfview>/',
+            function ($m) use ($proxy) {
+                $href = html_entity_decode($m[1], ENT_QUOTES);
+                if (str_contains($href, '?file=') || ! self::isSitePath($href)) {
+                    return $m[0];
+                }
+
+                return '<a class="hb-a" href="'.e($proxy.'?pdf='.rawurlencode($href)).'" data-pdfview>';
+            },
+            $html
+        ) ?? $html;
+    }
+
+    /** A plain path inside the site, like pdfs/666.pdf (no address of another site, no going up a folder) */
+    public static function isSitePath(string $href): bool
+    {
+        return $href !== '' && ! preg_match('#^([a-z][a-z0-9+.-]*:|/|\\\\)#i', $href) && ! str_contains($href, '..')
+            && ! str_contains($href, '?') && preg_match('/\.pdf$/i', $href) === 1;
     }
 
     /** Hachayol bars in some HTML: [href, issue number or null] */

@@ -33,6 +33,9 @@ class PageFileLinker
                 if (preg_match('/\sdownload\b/', $m[1].$m[4])) {
                     $href .= '&amp;download=1';   // checked again when the file is asked for
                 }
+                if (preg_match('/\sdata-pdfview\b/', $m[1].$m[4])) {
+                    $href .= '&amp;view=1';   // the site's reader: siteApi.php sends the file itself, never its address
+                }
 
                 return '<a'.$m[1].' href='.$m[2].$href.$m[2].$m[4].'>'.$m[5].'</a>';
             },

@@ -679,3 +679,15 @@ button.tp-r:hover{background:#F4F7FD;border-radius:8px}
 .chfeed .chmore{margin-top:10px;background:none;border:0;padding:0;font:inherit;font-weight:600;
   color:var(--blue);cursor:pointer;text-decoration:underline}
 
+
+/* View PDF reader: pages drawn as pictures, no download/save/print */
+.pdfv{position:fixed;inset:0;z-index:10050;display:flex;flex-direction:column;background:rgba(10,16,34,.95);user-select:none;-webkit-user-select:none}
+.pdfv-top{display:flex;align-items:center;gap:12px;padding:12px 18px;color:#fff;font-family:'Saira Condensed','Arial Narrow',system-ui,sans-serif}
+.pdfv-t{flex:1;font-weight:700;letter-spacing:.06em;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pdfv-x{min-width:64px;height:40px;padding:0 16px;border:0;border-radius:20px;background:var(--red);color:#fff;font:inherit;font-weight:700;letter-spacing:.1em;text-transform:uppercase;cursor:pointer}
+.pdfv-x:hover{background:var(--navy)}
+.pdfv-pages{flex:1;overflow:auto;display:flex;flex-direction:column;align-items:center;gap:14px;padding:6px 12px 28px}
+.pdfv-page{display:block;max-width:100%;height:auto;background:#fff;box-shadow:0 8px 30px rgba(0,0,0,.45);border-radius:4px;pointer-events:none}
+.pdfv-msg{color:#fff;font-family:system-ui,sans-serif;font-size:16px;margin-top:40px}
+html.pdfv-on{overflow:hidden}
+@media print{html.pdfv-on body{display:none !important}}
