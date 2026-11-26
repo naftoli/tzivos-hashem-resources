@@ -53,11 +53,12 @@ class PageFiles
         $byRef = $rules->keyBy('ref');
         $partAccess = $blockKey !== '' ? $scopes->forPart($blockKey) : null;
 
+        $partOff = $blockKey !== '' && $scopes->partIsOff($blockKey);   // Visibility settings: off wins over everything
         foreach (self::list($html) as $f) {
             $own = $byRef[$f['ref']] ?? null;
             // Hachayol bar files: their whole-issue setting is used in splitBars
             $access = ! empty($f['download']) ? $own : ($own ?? $partAccess);
-            if (! $access || $access->visibleToRole($role)) {
+            if (! $partOff && (! $access || $access->visibleToRole($role))) {
                 continue;
             }
             $html = $f['kind'] === 'image'
@@ -92,6 +93,9 @@ class PageFiles
             function ($m) use ($byRef, $role, $scopes) {
                 $href = $m[1];
                 $issue = FileScopes::issueOfBar($m[2]);
+                if ($issue !== null && $scopes->issueIsOff($issue)) {
+                    return '';   // Visibility settings: Full or this week is off
+                }
                 $access = $byRef['link:'.$href] ?? ($issue !== null ? $scopes->forIssue($issue) : null);
                 if ($access && ! $access->visibleToRole($role)) {
                     return '';

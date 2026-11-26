@@ -41,6 +41,7 @@ class FileDashboardController extends Controller
         }
 
         return view('admin.files.index', [
+            'switches' => FileVisibilityController::switchesFor($site->id, $issues, $features),
             'issues' => $issues,
             'features' => $features,
             'rules' => $rules,
@@ -57,6 +58,7 @@ class FileDashboardController extends Controller
         $scope = (string) $request->input('scope');
         $key = (string) $request->input('key');
         $ok = match ($scope) {
+            'full' => $key === 'hachayol',
             'issue' => isset($issues[$key]),
             'feature' => isset($features[$key]),
             'part' => FileScopes::partOf($key) !== null && isset($issues[FileScopes::partOf($key)[0]]['parts'][$key]),
@@ -65,7 +67,7 @@ class FileDashboardController extends Controller
         abort_unless($ok, 404);
 
         $rule = FileScopeRule::firstOrNew(['site_id' => $site->id, 'scope' => $scope, 'scope_key' => $key]);
-        $rule->fill(AccessForm::read($request, $scope === 'issue'));
+        $rule->fill(AccessForm::read($request, $scope === 'issue' || $scope === 'full'));
         $rule->updated_by = $request->user()->id;
         // A whole Hachayol / whole feature with everything ticked is the same as no setting.
         // A feature in one week is kept even then, so it can open up what a broader setting limits.
@@ -78,12 +80,15 @@ class FileDashboardController extends Controller
         }
 
         $name = match ($scope) {
+            'full' => 'Full',
             'issue' => $issues[$key]['label'],
             'feature' => $features[$key]['name'].' (all weeks)',
             'part' => $features[FileScopes::partOf($key)[1]]['name'].' · '.$issues[FileScopes::partOf($key)[0]]['label'],
         };
 
-        return redirect()->to(url()->previous().'#'.$scope.'-'.$key)->with('status', 'Saved '.$name.'.');
+        $anchor = in_array($scope, ['full', 'feature'], true) ? 'switch-'.$scope.'-'.$key : $scope.'-'.$key;   // back to the open Full / feature
+
+        return redirect()->to(strtok(url()->previous(), '#').'#'.$anchor)->with('status', 'Saved '.$name.'.');
     }
 
     /** Back to the broader settings (feature in one week only) */
@@ -102,7 +107,7 @@ class FileDashboardController extends Controller
      *
      * @return array{0: array<string, array>, 1: array<string, array>}
      */
-    private function structure(int $siteId): array
+    protected function structure(int $siteId): array
     {
         $issues = [];
         $features = [];

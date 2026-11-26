@@ -159,7 +159,17 @@ class ContentController extends Controller
         $barBlocks = PageBlock::where('site_id', $upload->site_id)->where('html', 'like', '%class="hachayolbar"%')->get(['id', 'html']);
         foreach ($barBlocks as $block) {
             foreach (PageFiles::bars($block->html) as $bar) {
-                if ($bar['issue'] === null || isset($own[$block->id.'|link:'.$bar['href']])) {
+                if ($bar['issue'] === null) {
+                    continue;
+                }
+                if ($scopes->issueIsOff($bar['issue'])) {   // Visibility settings: off wins over single-file settings
+                    $hit = $this->links->uploadFor($bar['href'], $uploads);
+                    if ($hit && $hit->id === $upload->id) {
+                        return false;
+                    }
+                    continue;
+                }
+                if (isset($own[$block->id.'|link:'.$bar['href']])) {
                     continue;
                 }
                 $rule = $scopes->forIssue($bar['issue']);

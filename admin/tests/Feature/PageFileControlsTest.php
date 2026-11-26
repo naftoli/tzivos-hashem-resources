@@ -303,6 +303,82 @@ class PageFileControlsTest extends TestCase
         $this->asPerson('teach@example.org')->getJson('/api/content/files/'.$upload->id)->assertStatus(403);
     }
 
+    // ---- Full / feature switches and Choose weeks ----
+
+    private function switches(array $state)
+    {
+        $base = ['full' => true, 'weeks_off' => [], 'features' => []];
+
+        return $this->actingAs($this->admin)->putJson(route('admin.files.visibility.update'), array_replace($base, $state));
+    }
+
+    public function test_the_files_page_has_the_full_and_feature_switches(): void
+    {
+        $this->weeklyParts();
+        $html = $this->actingAs($this->admin)->get(route('admin.files'))->assertOk()->getContent();
+
+        $this->assertStringContainsString('Full and features', $html);
+        $this->assertStringContainsString('data-switch="full-hachayol"', $html);
+        $this->assertStringContainsString('data-switch="feature-orders"', $html);
+        $this->assertStringContainsString('Choose weeks', $html);
+        $this->assertStringContainsString('All weeks', $html);
+    }
+
+    public function test_full_off_hides_every_hachayol_and_keeps_who_can_see(): void
+    {
+        $this->weeklyParts();
+        $this->saveScope(['scope' => 'issue', 'key' => '666', 'roles' => ['hq_staff']]);
+        $this->switches(['full' => false])->assertOk()->assertJsonPath('state.full', false);
+
+        $this->assertStringNotContainsString('hachayolbar', $this->pageAs('hq@example.org'));
+        $this->assertStringNotContainsString('pdfs/i667orders.pdf', $this->partAs('i667orders', 'hq@example.org'));
+        $this->assertSame(['hq_staff'], FileScopeRule::where('scope', 'issue')->first()->roles, 'who can see is not unticked');
+
+        $this->switches(['full' => true]);
+        $this->assertStringContainsString('hachayolbar', $this->pageAs('staff@example.org'));
+        $this->assertStringNotContainsString('hachayolbar', $this->pageAs('teach@example.org'));
+    }
+
+    public function test_full_choose_weeks_turns_one_week_off(): void
+    {
+        $this->weeklyParts();
+        $this->switches(['weeks_off' => ['666']])->assertOk();
+
+        $this->assertStringNotContainsString('hachayolbar', $this->pageAs('teach@example.org'));
+        $this->assertStringNotContainsString('pdfs/i666orders.pdf', $this->partAs('i666orders', 'teach@example.org'));
+        $this->assertStringContainsString('pdfs/i667orders.pdf', $this->partAs('i667orders', 'teach@example.org'));
+    }
+
+    public function test_a_feature_switch_and_its_weeks(): void
+    {
+        $this->weeklyParts();
+        $this->switches(['features' => ['orders' => ['on' => false, 'weeks' => null]]])->assertOk();
+        $this->assertStringNotContainsString('pdfs/i666orders.pdf', $this->partAs('i666orders', 'hq@example.org'));
+        $this->assertStringNotContainsString('pdfs/i667orders.pdf', $this->partAs('i667orders', 'hq@example.org'));
+        $this->assertStringContainsString('pdfs/i666rebbe.pdf', $this->partAs('i666rebbe', 'teach@example.org'));
+
+        $this->switches(['features' => ['orders' => ['on' => true, 'weeks' => ['667']]]])->assertOk();
+        $this->assertStringNotContainsString('pdfs/i666orders.pdf', $this->partAs('i666orders', 'teach@example.org'));
+        $this->assertStringContainsString('pdfs/i667orders.pdf', $this->partAs('i667orders', 'teach@example.org'));
+    }
+
+    public function test_who_can_see_for_full_covers_every_hachayol(): void
+    {
+        $this->weeklyParts();
+        $this->saveScope(['scope' => 'full', 'key' => 'hachayol', 'roles' => ['hq_staff'], 'download_roles' => ['hq_staff']])->assertRedirect();
+
+        $this->assertStringNotContainsString('hachayolbar', $this->pageAs('teach@example.org'));
+        $this->assertStringNotContainsString('pdfs/i667orders.pdf', $this->partAs('i667orders', 'teach@example.org'));
+        $this->assertStringContainsString('hachayolbar', $this->pageAs('staff@example.org'));
+    }
+
+    public function test_only_hq_admin_changes_the_switches(): void
+    {
+        $staff = User::where('email', 'staff@example.org')->first();
+        $this->actingAs($staff)->putJson(route('admin.files.visibility.update'), ['full' => false])->assertStatus(403);
+        $this->assertStringContainsString('hachayolbar', $this->pageAs('teach@example.org'));
+    }
+
     private function importedPdf(): Upload
     {
         $site = Site::where('slug', 'resources')->firstOrFail();

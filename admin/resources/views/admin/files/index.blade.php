@@ -6,6 +6,7 @@
 @push('head')
     <style>
         @include('admin.files._access_css')
+        @include('admin.files._switches_css')
         .help { background: #f3f6f9; border-radius: 8px; padding: 12px 16px; margin-bottom: 18px; color: #5e6278; }
         .help p { margin: 4px 0; }
         .frow { display: grid; grid-template-columns: minmax(220px, 300px) 1fr; gap: 14px; padding: 14px 0; border-top: 1px solid var(--line); }
@@ -31,10 +32,13 @@
     <div class="help">
         <p>Set who can see each Hachayol, each feature, and each single file on the site, and when. This only changes what the site shows. No file is deleted from the server.</p>
         <p><b>Which setting wins:</b> a setting on a single file wins over everything. Next comes a feature in one week. Otherwise the whole Hachayol and the whole feature both count: a person must be allowed by both. HQ admin always sees everything.</p>
+        <p><b>On / off:</b> Full and each feature also have a switch. Turning a switch off hides it on the site for everyone, without unticking who can see it. Full off hides every Hachayol; a feature off hides that feature. Choose weeks sets which weeks it shows.</p>
         <p>All levels ticked and no dates means everyone, at any time.</p>
     </div>
 
-    <div class="card">
+    @include('admin.files._switches')
+
+    <div class="card" style="margin-top:18px">
         <div class="card-head"><h2>Whole Hachayol</h2><div class="right"><span class="sub">{{ count($issues) }} issue(s)</span></div></div>
         <div class="card-body" style="padding-top:0">
             @forelse ($issues as $issue)

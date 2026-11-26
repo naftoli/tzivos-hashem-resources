@@ -5,12 +5,12 @@ namespace App\Models;
 use App\Models\Concerns\FileAccessRule;
 use Illuminate\Database\Eloquent\Model;
 
-/** Files dashboard setting for a whole Hachayol issue, a whole feature, or one feature in one week. */
+/** Files dashboard setting for every Hachayol (Full), a whole Hachayol issue, a whole feature, or one feature in one week. */
 class FileScopeRule extends Model
 {
     use FileAccessRule;
 
-    public const SCOPES = ['issue', 'feature', 'part'];
+    public const SCOPES = ['full', 'issue', 'feature', 'part'];   // full: every Hachayol (key "hachayol")
 
     protected $fillable = ['site_id', 'scope', 'scope_key', 'roles', 'download_roles', 'starts_at', 'ends_at', 'updated_by'];
 
