@@ -67,6 +67,13 @@
                 <p>{{ $siteNow->name }}: {{ \App\Models\Upload::where('site_id', $siteNow->id)->count() }} files uploaded</p>
             </a>
         @endif
+        @if ($u->isHQ())
+            <a class="tile" href="{{ route('admin.hachayols') }}">
+                <div class="ic" style="background:#ffe2e5;color:#f64e60"><svg viewBox="0 0 24 24"><path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H11v17H5.5A1.5 1.5 0 0 1 4 18.5z"/><path d="M20 4.5A1.5 1.5 0 0 0 18.5 3H13v17h5.5a1.5 1.5 0 0 0 1.5-1.5z"/><path d="M7 7h1.5M7 10.5h1.5M15.5 7H17"/></svg></div>
+                <h3>Upload Full Hachayols</h3>
+                <p>PDFs or a whole folder</p>
+            </a>
+        @endif
         @if ($u->isHQAdmin())
             <a class="tile" href="{{ route('admin.roles') }}">
                 <div class="ic" style="background:#eee5ff;color:#8950fc"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>

@@ -113,6 +113,20 @@ class HachayolImportTest extends TestCase
         $this->get('/admin/hachayols')->assertRedirect(route('login'));
     }
 
+    public function test_the_dashboard_has_an_upload_full_hachayols_tile_for_hq_only(): void
+    {
+        foreach (['hq_admin', 'hq_staff'] as $role) {
+            $this->actingAs($this->user($role))->get(route('dashboard'))->assertOk()
+                ->assertSee('<a class="tile" href="'.route('admin.hachayols').'">', false)
+                ->assertSee('<h3>Upload Full Hachayols</h3>', false);
+        }
+        foreach (['teacher', 'base'] as $role) {
+            $res = $this->actingAs($this->user($role))->get(route('dashboard'));
+            $this->assertStringNotContainsString('Upload Full Hachayols', (string) $res->getContent());
+            $this->assertStringNotContainsString(route('admin.hachayols'), (string) $res->getContent());
+        }
+    }
+
     public function test_upload_files_is_back_to_plain_file_uploads(): void
     {
         $page = $this->actingAs($this->user('hq_admin'))->get(route('admin.uploads'))->assertOk();
