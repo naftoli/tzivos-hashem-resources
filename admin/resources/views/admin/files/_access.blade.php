@@ -1,22 +1,33 @@
 {{-- Who can see / who can download / when. Needs $rule (or null), $levels, $download (bool). Inside a <form>. --}}
 <div class="acc">
-    <div class="acc-row"><span class="acc-l">Who can see</span>
-        <label><input type="checkbox" checked disabled> HQ admin</label>
-        @foreach ($levels as $role => $label)
-            <label><input type="checkbox" name="roles[]" value="{{ $role }}" @checked(! $rule || $rule->roles === null || in_array($role, $rule->roles, true))> {{ $label }}</label>
-        @endforeach
-    </div>
-    @if ($download)
-        <div class="acc-row"><span class="acc-l">Who can download</span>
-            <label><input type="checkbox" checked disabled> HQ admin</label>
-            @foreach ($levels as $role => $label)
-                <label><input type="checkbox" name="download_roles[]" value="{{ $role }}" @checked(! $rule || $rule->download_roles === null || in_array($role, $rule->download_roles, true))> {{ $label }}</label>
-            @endforeach
+    <div class="acc-grid">
+        <div class="acc-group">
+            <span class="acc-l">Who can see</span>
+            <div class="acc-opts">
+                <label class="chip"><input type="checkbox" checked disabled> HQ admin</label>
+                @foreach ($levels as $role => $label)
+                    <label class="chip"><input type="checkbox" name="roles[]" value="{{ $role }}" @checked(! $rule || $rule->roles === null || in_array($role, $rule->roles, true))> {{ $label }}</label>
+                @endforeach
+            </div>
         </div>
-    @endif
-    <div class="acc-row"><span class="acc-l">When</span>
-        <label>From <input type="datetime-local" name="starts_at" value="{{ \App\Support\AccessForm::show($rule?->starts_at) }}"></label>
-        <label>Until <input type="datetime-local" name="ends_at" value="{{ \App\Support\AccessForm::show($rule?->ends_at) }}"></label>
-        <button class="btn light" type="submit">Save</button>
+        @if ($download)
+            <div class="acc-group">
+                <span class="acc-l">Who can download</span>
+                <div class="acc-opts">
+                    <label class="chip"><input type="checkbox" checked disabled> HQ admin</label>
+                    @foreach ($levels as $role => $label)
+                        <label class="chip"><input type="checkbox" name="download_roles[]" value="{{ $role }}" @checked(! $rule || $rule->download_roles === null || in_array($role, $rule->download_roles, true))> {{ $label }}</label>
+                    @endforeach
+                </div>
+            </div>
+        @endif
+        <div class="acc-group">
+            <span class="acc-l">When</span>
+            <div class="acc-when">
+                <label class="date"><span>From</span> <input type="datetime-local" name="starts_at" value="{{ \App\Support\AccessForm::show($rule?->starts_at) }}"></label>
+                <label class="date"><span>Until</span> <input type="datetime-local" name="ends_at" value="{{ \App\Support\AccessForm::show($rule?->ends_at) }}"></label>
+            </div>
+        </div>
     </div>
+    <div class="acc-foot"><button class="btn acc-save" type="submit">Save</button></div>
 </div>
