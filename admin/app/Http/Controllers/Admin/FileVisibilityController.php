@@ -9,7 +9,8 @@ use Illuminate\Http\Request;
 /**
  * Files: the on/off switches for Full and each feature, and Choose weeks for each
  * (each week on/off, plus on/off for all).
- * Turning Full or a feature off keeps everything under it as it was.
+ * Full is the master switch: turning it off or on turns every feature off or on with it.
+ * A feature can still be turned on or off on its own after that.
  */
 class FileVisibilityController extends FileDashboardController
 {
@@ -52,8 +53,15 @@ class FileVisibilityController extends FileDashboardController
         }
 
         $v = FileVisibility::forSite($site->id);
+        $full = (bool) ($in['full'] ?? true);
+        if ($full !== (bool) $v->full) {
+            // Full is the master switch: turning it off (or on) turns every feature off (or on) too
+            foreach (array_keys($features) as $key) {
+                $feats[$key] = ['on' => $full, 'weeks' => $feats[$key]['weeks'] ?? ((($v->features ?? [])[$key]['weeks'] ?? null))];
+            }
+        }
         $v->fill([
-            'full' => (bool) ($in['full'] ?? true),
+            'full' => $full,
             'weeks_off' => array_values(array_intersect($weekIds, array_map('strval', (array) ($in['weeks_off'] ?? [])))),
             'features' => $feats,
             'updated_by' => $request->user()->id,

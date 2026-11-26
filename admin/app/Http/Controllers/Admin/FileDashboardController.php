@@ -183,6 +183,21 @@ class FileDashboardController extends Controller
             $issues[$num] ??= ['num' => $num, 'label' => 'Hachayol #'.$num, 'bar' => null, 'parts' => []];
             $issues[$num]['parts'][$b->block_key] = ['key' => $b->block_key, 'feature' => $feat, 'title' => $b->heading(), 'block' => $b];
         }
+        // Picture-only Hachayol sections on the week pages (e.g. Tanya Baal Peh): a switch of their own, even if only in one week
+        $picBlocks = PageBlock::with('page')->where('site_id', $siteId)->where('html', 'like', '%class="card tp-lb"%')->get();
+        foreach ($picBlocks as $b) {
+            foreach (\App\Support\PictureCards::all($b->html) as $c) {
+                [$num, $feat] = [$c['issue'], $c['key']];
+                if (! isset($features[$feat])) {
+                    $features[$feat] = ['name' => $c['name'], 'weeks' => 0];
+                }
+                $issues[$num] ??= ['num' => $num, 'label' => 'Hachayol #'.$num, 'bar' => null, 'parts' => []];
+                if (! isset($issues[$num]['parts'][$c['part']])) {
+                    $features[$feat]['weeks']++;
+                    $issues[$num]['parts'][$c['part']] = ['key' => $c['part'], 'feature' => $feat, 'title' => $c['title'], 'block' => $b, 'picture' => true];
+                }
+            }
+        }
         $barBlocks = PageBlock::with('page')->where('site_id', $siteId)->where('html', 'like', '%class="hachayolbar"%')->get();
         foreach ($barBlocks as $b) {
             foreach (PageFiles::bars($b->html) as $bar) {

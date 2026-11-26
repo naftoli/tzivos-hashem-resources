@@ -184,7 +184,12 @@
 
     document.querySelectorAll('[data-switch]').forEach(b => b.addEventListener('click', () => {
         const key = b.dataset.switch, f = featureOf(key);
-        if (f) state.features[f].on = !state.features[f].on; else state.full = !state.full;
+        if (f) state.features[f].on = !state.features[f].on;
+        else {
+            // Full is the master switch: every feature goes off (or on) with it
+            state.full = !state.full;
+            Object.keys(state.features).forEach(k => { state.features[k].on = state.full; });
+        }
         save();
     }));
     document.querySelectorAll('[data-open]').forEach(b => b.addEventListener('click', () => show('switch-' + b.dataset.open)));

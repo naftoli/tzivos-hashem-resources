@@ -295,7 +295,7 @@ class HachayolSite
                         $block->update(['html' => $this->featureHtml($key, $parts, $s, $slot, $parsha, $source, $num, $urls)]);
                         $cards[$feature] = $this->featureCard($key, $parts, $s, $urls[0] ?? null);
                     } else {
-                        $cards['~'.$i] = $this->pictureCardHtml($s, $urls);
+                        $cards['~'.$i] = $this->pictureCardHtml($s, $urls, $num);
                     }
                     $made++;
                 }
@@ -428,19 +428,25 @@ class HachayolSite
             .'<div class="msn"><span class="msn-body"><b>Mission</b>'.e($mission).'</span></div><div class="foot"><span class="go">Open →</span></div></div></button>';
     }
 
-    private function pictureCardHtml(array $s, array $urls): string
+    private function pictureCardHtml(array $s, array $urls, string $num = ''): string
     {
+        // which part of the Hachayol it is (e.g. i682tanyabaalpeh), so Full, the week, its own switch and Remove work on it
+        $part = $num !== '' ? ' data-part="i'.$num.\App\Support\PictureCards::key((string) $s['label']).'"' : '';
         $pages = (int) $s['start'] === (int) $s['end'] ? $s['start'] : $s['start'].'-'.$s['end'];
         $about = '<b>In this issue</b>'.e(trim((string) $s['title'])).' · pp. '.$pages;
         $card = $this->pictureCard((string) $s['label']);
         if ($card) {
-            $card = (string) preg_replace('/data-lb="[^"]*"/', 'data-lb="'.e(implode(',', $urls)).'"', $card, 1);
+            $card = (string) preg_replace('/ data-part="[^"]*"/', '', $card, 1);
+            $card = (string) preg_replace('/data-lb="[^"]*"/', 'data-lb="'.e(implode(',', $urls)).'"'.$part, $card, 1);
+            if ($num !== '') {
+                $card = (string) preg_replace('/(<div class="kick">)Hachayol #\d+(<\/div>)/', '${1}Hachayol #'.$num.'${2}', $card, 1);
+            }
             $card = (string) preg_replace('/<img class="cardimg" data-img="[^"]*"/', '<img class="cardimg" src="'.e($urls[0] ?? '').'"', $card, 1);
 
             return (string) preg_replace('/<span class="msn-body">.*?<\/span><\/div>/s', '<span class="msn-body">'.str_replace(['\\', '$'], ['\\\\', '\\$'], $about).'</span></div>', $card, 1);
         }
 
-        return '<button class="card tp-lb" data-lb="'.e(implode(',', $urls)).'" style="--cc:var(--purple)"><div class="ctop"></div><img class="cardimg" src="'.e($urls[0] ?? '').'" alt="" loading="lazy">'
+        return '<button class="card tp-lb" data-lb="'.e(implode(',', $urls)).'"'.$part.' style="--cc:var(--purple)"><div class="ctop"></div><img class="cardimg" src="'.e($urls[0] ?? '').'" alt="" loading="lazy">'
             .'<div class="in"><div class="rw" style="padding-left:0"><span class="ribbon c-purple">'.e((string) $s['label']).'</span></div>'
             .'<div class="msn"><span class="msn-body">'.$about.'</span></div><div class="foot"><span class="go">Open →</span></div></div></button>';
     }
