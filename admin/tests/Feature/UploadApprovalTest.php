@@ -40,28 +40,20 @@ class UploadApprovalTest extends TestCase
         $this->assertSame('approved', Upload::approvalStatusFor($this->hqAdmin()));
     }
 
-    public function test_a_teacher_store_is_pending_and_a_base_commander_store_is_approved(): void
+    public function test_teachers_and_base_commanders_cannot_upload_through_the_admin_any_more(): void
     {
         $pageUrl = 'https://tzivoshashem.com/resources/site/#/campaign';
         $this->ensureCampaignPage();
 
-        $this->actingAs($this->teacher())->post(route('admin.uploads.store'), [
-            'page_url' => $pageUrl,
-            'file_type' => 'feature',
-            'files' => [UploadedFile::fake()->create('lesson.txt', 12, 'text/plain')],
-        ])->assertRedirect(route('admin.uploads'));
-        $teacherUpload = Upload::query()->where('original_name', 'lesson.txt')->first();
-        $this->assertNotNull($teacherUpload);
-        $this->assertTrue($teacherUpload->isPending());
-
-        $this->actingAs($this->baseCommander())->post(route('admin.uploads.store'), [
-            'page_url' => $pageUrl,
-            'file_type' => 'feature',
-            'files' => [UploadedFile::fake()->create('base-notes.txt', 12, 'text/plain')],
-        ])->assertRedirect(route('admin.uploads'));
-        $baseUpload = Upload::query()->where('original_name', 'base-notes.txt')->first();
-        $this->assertNotNull($baseUpload);
-        $this->assertTrue($baseUpload->isApproved());
+        foreach ([$this->teacher(), $this->baseCommander()] as $user) {
+            $this->actingAs($user)->post(route('admin.uploads.store'), [
+                'page_url' => $pageUrl,
+                'file_type' => 'feature',
+                'files' => [UploadedFile::fake()->create('lesson.txt', 12, 'text/plain')],
+            ])->assertRedirect(route('login'));
+            $this->assertGuest();
+        }
+        $this->assertSame(0, Upload::count());
     }
 
     public function test_existing_uploads_default_to_approved(): void
@@ -107,12 +99,12 @@ class UploadApprovalTest extends TestCase
     {
         $teacher = $this->teacher();
         $upload = $this->makeUpload($teacher, 'mine.txt', status: 'pending');
-        $this->actingAs($teacher)->post(route('admin.uploads.approve', $upload))->assertForbidden();
+        $this->actingAs($teacher)->post(route('admin.uploads.approve', $upload))->assertRedirect(route('login'));
         $this->actingAs($this->hqStaff())->post(route('admin.uploads.reject', $upload))->assertForbidden();
         $this->assertTrue($upload->fresh()->isPending());
     }
 
-    public function test_hq_admin_sees_the_waiting_list_and_the_teacher_sees_the_mark(): void
+    public function test_hq_admin_still_sees_a_teachers_earlier_pending_upload(): void
     {
         $teacher = $this->teacher();
         $upload = $this->makeUpload($teacher, 'awaiting.txt', status: 'pending');
@@ -123,11 +115,8 @@ class UploadApprovalTest extends TestCase
         $this->assertStringContainsString(route('admin.uploads.approve', $upload, false), $adminHtml);
         $this->assertStringContainsString(route('admin.uploads.reject', $upload, false), $adminHtml);
 
-        $teacherHtml = $this->actingAs($teacher)->get(route('admin.uploads'))->assertOk()->getContent();
-        $this->assertStringContainsString('awaiting.txt', $teacherHtml);
-        $this->assertStringContainsString('Waiting for approval', $teacherHtml);
-        $this->assertStringNotContainsString(route('admin.uploads.approve', $upload, false), $teacherHtml);
-        $this->assertStringNotContainsString('<h2>Waiting for approval</h2>', $teacherHtml);
+        // a Teacher's earlier pending upload stays in HQ admin's waiting list; the Teacher can't open the admin any more
+        $this->actingAs($teacher)->get(route('admin.uploads'))->assertRedirect(route('login'));
     }
 
     public function test_base_commander_uploads_are_listed_as_live_immediately(): void

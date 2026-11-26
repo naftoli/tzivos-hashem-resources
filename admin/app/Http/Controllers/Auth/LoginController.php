@@ -111,7 +111,7 @@ class LoginController extends Controller
         return $this->completeLogin($request, $user, $remember);
     }
 
-    /** News site accounts may not sign in to the admin. Their level is only for the public site. */
+    /** Only HQ admin and HQ staff (and the Owner) may sign in to the admin. The other levels are only for the public site. */
     protected function completeLogin(Request $request, User $user, bool $remember)
     {
         if (! $user->canAccessAdminSite()) {

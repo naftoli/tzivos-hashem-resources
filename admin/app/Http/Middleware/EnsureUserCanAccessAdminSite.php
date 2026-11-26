@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
-/** The News site level may not use the admin site. */
+/** Only HQ admin and HQ staff (and the Owner) may use the admin site; this also ends sessions that were open before. */
 class EnsureUserCanAccessAdminSite
 {
     public const MESSAGE = "This account doesn't have access to the admin.";

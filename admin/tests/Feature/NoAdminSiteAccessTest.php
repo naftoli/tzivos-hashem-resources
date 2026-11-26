@@ -62,18 +62,47 @@ class NoAdminSiteAccessTest extends TestCase
         $this->assertSame('news', $user->role);
     }
 
-    public function test_base_commanders_have_the_same_admin_access_as_teachers(): void
+    public function test_teachers_and_base_commanders_are_turned_away_at_password_login(): void
     {
-        $teacher = User::factory()->create(['email' => 'teacher-ok@example.org', 'role' => 'teacher']);
-        $base = User::factory()->create(['email' => 'base-ok@example.org', 'role' => 'base']);
+        foreach (['teacher', 'base'] as $role) {
+            $user = User::factory()->create(['email' => $role.'-login@example.org', 'role' => $role, 'password' => Hash::make('secret-pass')]);
 
-        foreach ([$teacher, $base] as $user) {
-            $this->actingAs($user)->get(route('dashboard'))->assertOk()->assertDontSee("You don't have access to the admin site", false);
-            $this->actingAs($user)->get(route('admin.uploads'))->assertOk();
-            $this->actingAs($user)->get(route('admin.sites.search'))->assertOk();
-            $this->actingAs($user)->get(route('admin.pages'))->assertForbidden();
-            $this->actingAs($user)->get(route('admin.roles'))->assertForbidden();
+            $this->from('/login')->followingRedirects()->post('/login', ['email' => $user->email, 'password' => 'secret-pass'])
+                ->assertOk()
+                ->assertSee(EnsureUserCanAccessAdminSite::MESSAGE);
+            $this->assertGuest();
+            $this->assertSame($role, $user->fresh()->role, 'the account and its level stay');
         }
+    }
+
+    public function test_teachers_and_base_commanders_existing_sessions_are_logged_out_of_admin_routes(): void
+    {
+        foreach (['teacher', 'base'] as $role) {
+            $user = User::factory()->create(['email' => $role.'-block@example.org', 'role' => $role]);
+            foreach (['dashboard', 'account', 'account.password', 'admin.uploads', 'admin.sites.search', 'admin.pages', 'admin.roles'] as $name) {
+                $this->actingAs($user)->get(route($name))
+                    ->assertRedirect(route('login'))
+                    ->assertSessionHasErrors(['email' => EnsureUserCanAccessAdminSite::MESSAGE]);
+                $this->assertGuest();
+            }
+            $this->actingAs($user)->post(route('admin.uploads.store'), [])->assertRedirect(route('login'));
+            $this->assertGuest();
+        }
+    }
+
+    public function test_teacher_handoff_login_is_rejected_and_the_account_is_kept(): void
+    {
+        $this->getHandoff('/login/mashpia/return', 'teacher-handoff@example.org', 'Teacher Person', 'Teacher')
+            ->assertRedirect(route('login'))
+            ->assertSessionHasErrors(['email' => EnsureUserCanAccessAdminSite::MESSAGE]);
+        $this->assertGuest();
+        $this->assertNotNull(User::where('email', 'teacher-handoff@example.org')->first());
+    }
+
+    public function test_the_owner_can_always_use_the_admin(): void
+    {
+        $owner = User::factory()->create(['email' => 'owner-ok@example.org', 'role' => 'hq_admin', 'is_owner' => true]);
+        $this->actingAs($owner)->get(route('dashboard'))->assertOk();
     }
 
     public function test_hq_staff_and_hq_admin_access_is_unchanged(): void

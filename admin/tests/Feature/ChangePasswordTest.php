@@ -23,7 +23,7 @@ class ChangePasswordTest extends TestCase
 
     public function test_signed_in_levels_can_open_the_page_and_see_the_menu_link(): void
     {
-        foreach (['hq_admin', 'hq_staff', 'teacher', 'base'] as $role) {
+        foreach (['hq_admin', 'hq_staff'] as $role) {
             $user = User::factory()->create([
                 'email' => $role.'-pw@example.org',
                 'role' => $role,
@@ -36,6 +36,15 @@ class ChangePasswordTest extends TestCase
             $this->assertStringContainsString('Confirm new password', $html);
             $this->assertStringContainsString(route('account.password', absolute: false), $html);
             $this->assertStringContainsString('Change password', $this->actingAs($user)->get(route('dashboard'))->assertOk()->getContent());
+        }
+    }
+
+    public function test_teachers_and_base_commanders_cannot_open_the_page(): void
+    {
+        foreach (['teacher', 'base'] as $role) {
+            $user = User::factory()->create(['email' => $role.'-nopw@example.org', 'role' => $role, 'password' => 'secret-old1']);
+            $this->actingAs($user)->get(route('account.password'))->assertRedirect(route('login'));
+            $this->assertGuest();
         }
     }
 
@@ -104,7 +113,7 @@ class ChangePasswordTest extends TestCase
     {
         return User::factory()->create([
             'email' => 'changer@example.org',
-            'role' => 'teacher',
+            'role' => 'hq_staff',
             'password' => $password,
         ]);
     }
