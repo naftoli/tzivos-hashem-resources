@@ -1,4 +1,4 @@
-{{-- Files: Full and each feature, each with an on/off switch. Click one to open it: its switch, Choose weeks, and who can see it.
+{{-- Files: Full and each feature, each with an on/off switch. Click one to open it: its switch and Choose weeks (a feature also has who can see it).
      Needs $switches (weeks, features, state), $rules, $levels. --}}
 @php
     $items = array_merge([['id' => 'hachayol', 'name' => 'Full', 'scope' => 'full']], array_map(fn ($f) => $f + ['scope' => 'feature'], $switches['features']));
@@ -30,13 +30,15 @@
                     <span class="sw-sub" data-weeks-count="{{ $it['scope'] }}-{{ $it['id'] }}"></span>
                     <button type="button" class="btn light" data-weeks="{{ $it['scope'] }}-{{ $it['id'] }}">Choose weeks</button>
                 </div>
+                @if ($it['scope'] === 'feature')
                 <form method="POST" action="{{ route('admin.files.update') }}" class="sw-who">
                     @csrf
                     @method('PUT')
                     <input type="hidden" name="scope" value="{{ $it['scope'] }}">
                     <input type="hidden" name="key" value="{{ $it['id'] }}">
-                    @include('admin.files._access', ['rule' => $rule, 'levels' => $levels, 'download' => $it['scope'] === 'full'])
+                    @include('admin.files._access', ['rule' => $rule, 'levels' => $levels, 'download' => false])
                 </form>
+                @endif
             </div>
         @endforeach
 
@@ -159,7 +161,7 @@
     });
     document.getElementById('swWeeksBack').addEventListener('click', () => { weeksFor = null; show(back); });
 
-    // after saving who can see, come back to the open Full / feature
+    // after saving who can see, come back to the open feature
     if (location.hash.startsWith('#switch-') && document.getElementById(location.hash.slice(1))) show(location.hash.slice(1));
     paint();
 })();
