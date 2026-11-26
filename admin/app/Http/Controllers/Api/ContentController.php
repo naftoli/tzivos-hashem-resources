@@ -5,11 +5,14 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\ContentView;
 use App\Models\PageBlock;
+use App\Models\PageFileRule;
 use App\Models\Site;
 use App\Models\Upload;
 use App\Services\FileGrant;
 use App\Services\PageFileLinker;
 use App\Services\SiteViewerResolver;
+use App\Support\FileScopes;
+use App\Support\PageFiles;
 use App\Support\SiteViewer;
 use Illuminate\Http\Request;
 
@@ -40,8 +43,14 @@ class ContentController extends Controller
         }
 
         $uploads = $this->uploads($site->id);
-        $html = $this->links->rewrite($block->html, $uploads, $viewer->role);
-        $html = $this->links->appendForPage($html, $uploads, $viewer->role, $block);
+        $scopes = FileScopes::load($site->id);
+        $html = PageFiles::apply($block->html, $block->fileRules()->get(), $viewer->role, $scopes, $block->block_key);
+        $html = $this->links->rewrite($html, $uploads, $viewer->role);
+        // a weekly feature this person may not see (Files dashboard): its uploads are not added either
+        $part = $scopes->forPart($block->block_key);
+        if (! $part || $part->visibleToRole($viewer->role)) {
+            $html = $this->links->appendForPage($html, $uploads, $viewer->role, $block);
+        }
         ContentView::record($viewer, 'page', $this->title($html, $pageId), $pageId, null, $site->id);
 
         return response()->json(['id' => $pageId, 'html' => $html]);
@@ -110,9 +119,61 @@ class ContentController extends Controller
             return response()->json(['message' => "You don't have access to this file right now."], 403);
         }
 
+        $download = $request->boolean('download');
+        if (! $this->mayOpen($upload, $viewer->role, $download)) {
+            return response()->json(['message' => $download ? "You don't have permission to download this file." : "You don't have access to this file right now."], 403);
+        }
+
         ContentView::record($viewer, 'file', $upload->original_name, $upload->page_key, $upload->id, $upload->site_id);
 
-        return response()->json(['url' => $this->grants->url($upload, $viewer)]);
+        return response()->json(['url' => $this->grants->url($upload, $viewer, 120, $download)]);
+    }
+
+    /**
+     * The same settings the page uses (Site pages › Files, and the Files dashboard for Hachayol bars),
+     * checked again when the file itself is asked for, so a hidden link or a missing Download button can't be worked around.
+     */
+    private function mayOpen(Upload $upload, string $role, bool $download): bool
+    {
+        $uploads = $this->uploads($upload->site_id);
+        $check = fn ($rule) => $download ? $rule->canDownload($role) : $rule->visibleToRole($role);
+
+        $rules = PageFileRule::query()
+            ->where('ref', 'like', 'link:%')
+            ->whereHas('pageBlock', fn ($q) => $q->where('site_id', $upload->site_id))
+            ->get();
+        $own = [];
+        foreach ($rules as $rule) {
+            $own[$rule->page_block_id.'|'.$rule->ref] = true;
+            $hit = $this->links->uploadFor(substr($rule->ref, 5), $uploads);
+            if ($hit && $hit->id === $upload->id && ! $check($rule)) {
+                return false;
+            }
+        }
+
+        $scopes = FileScopes::load($upload->site_id);
+        $part = $upload->page_key ? $scopes->forPart($upload->page_key) : null;
+        if ($part && ! $check($part)) {
+            return false;
+        }
+        $barBlocks = PageBlock::where('site_id', $upload->site_id)->where('html', 'like', '%class="hachayolbar"%')->get(['id', 'html']);
+        foreach ($barBlocks as $block) {
+            foreach (PageFiles::bars($block->html) as $bar) {
+                if ($bar['issue'] === null || isset($own[$block->id.'|link:'.$bar['href']])) {
+                    continue;
+                }
+                $rule = $scopes->forIssue($bar['issue']);
+                if (! $rule) {
+                    continue;
+                }
+                $hit = $this->links->uploadFor($bar['href'], $uploads);
+                if ($hit && $hit->id === $upload->id && ! $check($rule)) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     private function viewer(Request $request): SiteViewer|\Illuminate\Http\JsonResponse

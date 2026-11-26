@@ -57,7 +57,7 @@ class PublicFileController extends Controller
                 return response()->view('errors.access-denied', ['message' => "You don't have access to this file right now."], 403);
             }
 
-            return $this->bytes($upload);
+            return $this->bytes($upload, app(FileGrant::class)->isDownload($request));
         }
         if (! $request->user()) {
             return redirect()->guest(route('login'));
@@ -77,7 +77,7 @@ class PublicFileController extends Controller
         return $this->bytes($upload);
     }
 
-    private function bytes(Upload $upload)
+    private function bytes(Upload $upload, bool $download = false)
     {
         if (! Storage::disk('public')->exists($upload->stored_path)) {
             abort(404);
@@ -85,7 +85,7 @@ class PublicFileController extends Controller
 
         return response()->file(Storage::disk('public')->path($upload->stored_path), [
             'Content-Type' => $upload->mime_type ?: 'application/octet-stream',
-            'Content-Disposition' => 'inline; filename="' . addslashes($upload->original_name) . '"',
+            'Content-Disposition' => ($download ? 'attachment' : 'inline') . '; filename="' . addslashes($upload->original_name) . '"',
             'Cache-Control' => 'private, no-store',
         ]);
     }

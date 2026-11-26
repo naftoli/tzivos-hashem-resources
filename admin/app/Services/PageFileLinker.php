@@ -30,6 +30,9 @@ class PageFileLinker
                     return '';
                 }
                 $href = $proxy.'?file='.$upload->id;
+                if (preg_match('/\sdownload\b/', $m[1].$m[4])) {
+                    $href .= '&amp;download=1';   // checked again when the file is asked for
+                }
 
                 return '<a'.$m[1].' href='.$m[2].$href.$m[2].$m[4].'>'.$m[5].'</a>';
             },
@@ -178,6 +181,14 @@ class PageFileLinker
         $add = ($m[1][0] === '' ? '' : ',').e($url);
 
         return substr($html, 0, $at).$add.substr($html, $at);
+    }
+
+    /** The upload a page link points to (the same match used for the page HTML), or null. @param Collection<int, Upload> $uploads */
+    public function uploadFor(string $href, Collection $uploads): ?Upload
+    {
+        [$byKey, $byName] = $this->index($uploads);
+
+        return $this->match($byKey, $byName, $href);
     }
 
     /**
