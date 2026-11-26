@@ -41,6 +41,7 @@ class FileDashboardController extends Controller
         }
 
         return view('admin.files.index', [
+            'switches' => FileVisibilityController::switchesFor($site->id, $issues, $features),
             'issues' => $issues,
             'features' => $features,
             'rules' => $rules,
@@ -83,7 +84,9 @@ class FileDashboardController extends Controller
             'part' => $features[FileScopes::partOf($key)[1]]['name'].' · '.$issues[FileScopes::partOf($key)[0]]['label'],
         };
 
-        return redirect()->to(url()->previous().'#'.$scope.'-'.$key)->with('status', 'Saved '.$name.'.');
+        $anchor = $scope === 'feature' ? 'switch-feature-'.$key : $scope.'-'.$key;   // back to the open feature
+
+        return redirect()->to(strtok(url()->previous(), '#').'#'.$anchor)->with('status', 'Saved '.$name.'.');
     }
 
     /** Back to the broader settings (feature in one week only) */
@@ -102,7 +105,7 @@ class FileDashboardController extends Controller
      *
      * @return array{0: array<string, array>, 1: array<string, array>}
      */
-    private function structure(int $siteId): array
+    protected function structure(int $siteId): array
     {
         $issues = [];
         $features = [];

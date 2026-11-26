@@ -59,6 +59,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/admin/files', [\App\Http\Controllers\Admin\FileDashboardController::class, 'index'])->name('admin.files');
         Route::put('/admin/files', [\App\Http\Controllers\Admin\FileDashboardController::class, 'update'])->name('admin.files.update');
         Route::delete('/admin/files', [\App\Http\Controllers\Admin\FileDashboardController::class, 'clear'])->name('admin.files.clear');
+        Route::put('/admin/files/visibility', [\App\Http\Controllers\Admin\FileVisibilityController::class, 'update'])->name('admin.files.visibility.update');
         Route::get('/admin/stats', [StatsController::class, 'index'])->name('admin.stats');
         Route::get('/admin/stats.csv', [StatsController::class, 'csv'])->name('admin.stats.csv');
     });
