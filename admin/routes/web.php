@@ -79,6 +79,13 @@ Route::middleware('auth')->group(function () {
         Route::post('/admin/pages/{page}/blocks/{block}/files/remove', [\App\Http\Controllers\Admin\PageFileController::class, 'remove'])->name('admin.pages.block.files.remove');
         Route::delete('/admin/pages/{page}/blocks/{block}/files', [\App\Http\Controllers\Admin\PageFileController::class, 'clear'])->name('admin.pages.block.files.clear');
         Route::post('/admin/pages/{page}/blocks/{block}/files/restore', [\App\Http\Controllers\Admin\PageFileController::class, 'restore'])->name('admin.pages.block.files.restore');
+        // Upload Full Hachayols (its own page)
+        Route::get('/admin/hachayols', [\App\Http\Controllers\Admin\HachayolImportController::class, 'index'])->name('admin.hachayols');
+        Route::post('/admin/hachayols', [\App\Http\Controllers\Admin\HachayolImportController::class, 'analyze'])->name('admin.hachayols.analyze');
+        Route::get('/admin/hachayols/{batch}', [\App\Http\Controllers\Admin\HachayolImportController::class, 'preview'])->name('admin.hachayols.preview');
+        Route::get('/admin/hachayols/{batch}/{id}/{page}.jpg', [\App\Http\Controllers\Admin\HachayolImportController::class, 'thumb'])->whereNumber('page')->name('admin.hachayols.thumb');
+        Route::post('/admin/hachayols/{batch}/publish', [\App\Http\Controllers\Admin\HachayolImportController::class, 'publish'])->name('admin.hachayols.publish');
+        Route::delete('/admin/hachayols/{batch}', [\App\Http\Controllers\Admin\HachayolImportController::class, 'discard'])->name('admin.hachayols.discard');
     });
 
     Route::middleware('role:hq_admin,hq_staff,teacher,base')->group(function () {

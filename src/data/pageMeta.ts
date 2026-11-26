@@ -26,12 +26,18 @@ export const pageBranch = META.branch;
  */
 export const altCrumbBranch = META.altCrumb;
 
+/**
+ * A weekly Hachayol feature page added later in the admin (Upload Full Hachayols), e.g. `i682orders`.
+ * It is not in the built-in pages; its HTML comes from the admin, and it lives under Date like the others.
+ */
+export const NEW_ISSUE_PAGE = /^i\d{3,4}(orders|rebbe|niggun|frames|squad|roots|mivtzoim)$/;
+
 /** Whether `id` is a known content page (i.e. renderable by ContentPage). */
 export function hasPage(id: string): boolean {
-  return Object.prototype.hasOwnProperty.call(pageBranch, id);
+  return Object.prototype.hasOwnProperty.call(pageBranch, id) || NEW_ISSUE_PAGE.test(id);
 }
 
 /** A page's branch as a typed `BranchId`, falling back to 'home'. */
 export function branchOfPage(id: string): BranchId {
-  return (pageBranch[id] ?? 'home') as BranchId;
+  return (pageBranch[id] ?? (NEW_ISSUE_PAGE.test(id) ? 'date' : 'home')) as BranchId;
 }
