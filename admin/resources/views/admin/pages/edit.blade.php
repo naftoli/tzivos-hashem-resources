@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', $block->block_key . ' | ' . $page->slug . ' | Resources Admin')
+@section('title', $block->block_key . ' | ' . ucfirst($page->slug) . ' | Resources Admin')
 @section('page-title', 'Site pages')
 
 @section('content')
@@ -28,7 +28,7 @@
         .hidden-list input.changed { background: #fff3b0; }
         textarea { width: 100%; min-height: 60vh; padding: 12px; border: 1px solid #e4e6ef; border-radius: 8px; background: #f9fafc; font: 13px/1.45 ui-monospace, Consolas, monospace; white-space: pre-wrap; }
     </style>
-    <div class="crumbs"><a href="{{ route('admin.pages') }}">Site pages</a> › <a href="{{ route('admin.pages.show', $page) }}">{{ $page->slug }}</a> › {{ $block->block_key }}</div>
+    <div class="crumbs"><a href="{{ route('admin.pages') }}">Site pages</a> › <a href="{{ route('admin.pages.show', $page) }}">{{ ucfirst($page->slug) }}</a> › {{ $block->block_key }}</div>
 
     @if (session('status'))
         <div class="ok">{{ session('status') }}</div>
@@ -40,7 +40,7 @@
     <div class="card">
         <div class="card-head">
             <div>
-                <h2>{{ $page->slug }} / {{ $block->block_key }}</h2>
+                <h2>{{ ucfirst($page->slug) }} / {{ $block->block_key }}</h2>
                 <div class="meta">
                     {{ $block->heading() }}
                     @if ($block->edited_at)

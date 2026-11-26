@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', $page->slug . ' | Pages | Resources Admin')
+@section('title', ucfirst($page->slug) . ' | Pages | Resources Admin')
 @section('page-title', 'Site pages')
 
 @section('content')
@@ -9,7 +9,7 @@
         <div class="card-head">
             <nav class="tabs">
                 @foreach ($allPages as $p)
-                    <a href="{{ route('admin.pages.show', $p) }}" class="@if ($p->slug === $page->slug) on @endif">{{ $p->slug }}</a>
+                    <a href="{{ route('admin.pages.show', $p) }}" class="@if ($p->slug === $page->slug) on @endif">{{ ucfirst($p->slug) }}</a>
                 @endforeach
             </nav>
             <div class="right"><span class="sub">{{ $total }} part(s)</span><a class="btn light" href="{{ route('api.pages.show', $page) }}" target="_blank">View as JSON</a></div>
