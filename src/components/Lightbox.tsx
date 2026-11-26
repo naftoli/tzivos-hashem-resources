@@ -15,6 +15,11 @@ import { useEscapeToClose } from '@/lib/useEscapeToClose';
 
 const IMG_TYPED = IMG as Record<string, string>;
 
+/** A picture id from IMG.json, or the address of an uploaded picture (`/resources/siteApi.php?file=12`). */
+function srcOf(id: string): string | undefined {
+  return IMG_TYPED[id] ?? (/^(\/|https?:\/\/)/.test(id) ? id : undefined);
+}
+
 interface LightboxContextValue {
   /** Opens the lightbox for a comma-separated list of IMG ids (`img.zoom`'s
    * `.pagerow`-grouped ids, `[data-full]`, `[data-tefview]`'s generated
@@ -45,7 +50,7 @@ export function LightboxProvider({ children }: { children: ReactNode }) {
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean);
-    if (!list.some((id) => IMG_TYPED[id])) return;
+    if (!list.some((id) => srcOf(id))) return;
     const m = /^i(\d+)sect/.exec(list[0] || '');
     setState({ open: true, ids: list, issue: m ? m[1] : '' });
   }, []);
@@ -107,7 +112,7 @@ export function LightboxProvider({ children }: { children: ReactNode }) {
     if (!state.open) return;
     const { ids, issue } = state;
     const title = issue ? `Hachayol #${issue}` : 'Hachayol';
-    const urls = ids.map((id) => IMG_TYPED[id]).filter(Boolean);
+    const urls = ids.map((id) => srcOf(id)).filter((u): u is string => Boolean(u));
     if (!urls.length) return;
 
     let files: File[];
@@ -170,7 +175,7 @@ export function LightboxProvider({ children }: { children: ReactNode }) {
         <div className={spreadClassName} id="lbspread" ref={spreadRef}>
           {state.open &&
             state.ids.map((id, i) =>
-              IMG_TYPED[id] ? <img key={`${id}-${i}`} src={IMG_TYPED[id]} alt="" /> : null,
+              srcOf(id) ? <img key={`${id}-${i}`} src={srcOf(id)} alt="" /> : null,
             )}
         </div>
         <div className={`lbtoast${toast.show ? ' show' : ''}`} id="lbtoast" role="status">

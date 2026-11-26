@@ -118,12 +118,13 @@ export function dispatchContentClick(
     event.stopPropagation();
     const row = zoomImg.closest('.pagerow');
     if (row) {
+      // Uploaded pictures have no data-img; their address stands in for the id.
       const ids = Array.from(row.querySelectorAll('img.zoom'))
-        .map((x) => x.getAttribute('data-img'))
+        .map((x) => x.getAttribute('data-img') ?? x.getAttribute('src'))
         .filter((v): v is string => Boolean(v));
       handlers.openLightbox(ids.join(','));
     } else {
-      const id = zoomImg.getAttribute('data-img');
+      const id = zoomImg.getAttribute('data-img') ?? zoomImg.getAttribute('src');
       if (id) handlers.openLightbox(id);
     }
     return true;

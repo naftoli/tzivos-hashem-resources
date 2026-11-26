@@ -40,14 +40,20 @@ class PageFileLinker
     /**
      * Add approved files for this page that are not already a link on it,
      * so a new upload shows up even when the page did not already have that filename.
+     * Each file goes where the page already shows files of its kind, with the same markup:
+     * pictures beside the page pictures (and in its Full Screen view), audio and video
+     * with the other media links, and other files beside the Print PDF button.
      *
      * @param Collection<int, Upload> $uploads
      */
     public function appendForPage(string $html, Collection $uploads, string $role, PageBlock $block): string
     {
         $proxy = rtrim((string) config('admin.site_api'), '?');
-        $links = '';
-        foreach ($uploads as $upload) {
+        $pics = '';
+        $picUrls = [];
+        $btns = '';
+        $media = '';
+        foreach ($uploads->sortBy('id') as $upload) {
             if (! $upload->isApproved() || ! $upload->visibleToRole($role)) {
                 continue;
             }
@@ -59,19 +65,119 @@ class PageFileLinker
             if (str_contains($html, '?file='.$upload->id)) {
                 continue;
             }
-            $name = e($upload->original_name);
-            $href = e($proxy.'?file='.$upload->id);
-            $links .= '<a class="imgbtn" href="'.$href.'" target="_blank" rel="noopener">'.$name.'</a>';
+            $url = $proxy.'?file='.$upload->id;
+            $href = e($url);
+            $label = e(pathinfo($upload->original_name, PATHINFO_FILENAME) ?: $upload->original_name);
+            $kind = $this->kind($upload);
+
+            if ($kind === 'image') {
+                $fig = '<figure class="pageimg"><img class="zoom" src="'.$href.'" alt="'.$label.'" loading="lazy"></figure>';
+                $placed = $this->insertInto($html, 'pagerow', $fig);
+                if ($placed !== null) {
+                    [$html, $after] = $placed;
+                    $html = $this->addToFullScreen($html, $after, $url);
+                } else {
+                    $pics .= $fig;
+                    $picUrls[] = $url;
+                }
+                continue;
+            }
+
+            if ($kind === 'audio' || $kind === 'video') {
+                $chip = '<a class="mediachip" href="'.$href.'" target="_blank" rel="noopener">'.($kind === 'audio' ? '🎧 ' : '🎥 ').$label.'</a>';
+                $placed = $this->insertInto($html, 'mediachips', $chip);
+                if ($placed !== null) {
+                    $html = $placed[0];
+                } else {
+                    $media .= $chip;
+                }
+                continue;
+            }
+
+            $btn = '<a class="imgbtn" href="'.$href.'" target="_blank" rel="noopener">'.$label.'</a>';
+            $placed = $this->insertInto($html, 'imgbtns', $btn);
+            if ($placed !== null) {
+                $html = $placed[0];
+            } else {
+                $btns .= $btn;
+            }
         }
-        if ($links === '') {
+
+        // Files whose kind the page does not show yet: the same blocks the other pages use.
+        $extra = '';
+        if ($pics !== '') {
+            $full = '<button class="imgbtn" data-full="'.e(implode(',', $picUrls)).'">Full Screen</button>';
+            $extra .= '<div class="pagerow">'.$pics.'</div><div class="imgbtns">'.$full.$btns.'</div>';
+        } elseif ($btns !== '') {
+            $extra .= '<div class="imgbtns">'.$btns.'</div>';
+        }
+        if ($media !== '') {
+            $extra .= '<div class="mediachips">'.$media.'</div>';
+        }
+        if ($extra === '') {
             return $html;
         }
-        $extra = '<div class="uploaded-files">'.$links.'</div>';
+        $extra = '<div class="uploaded-files">'.$extra.'</div>';
+        // Inside the page's content column (section > .sec > .wrap), like the page's own files
+        if (preg_match('/<\/div><\/div><\/section>\s*$/', $html, $m, PREG_OFFSET_CAPTURE)) {
+            return substr($html, 0, $m[0][1]).$extra.substr($html, $m[0][1]);
+        }
         if (str_contains($html, '</section>')) {
             return (string) preg_replace('/<\/section>(?!.*<\/section>)/s', $extra.'</section>', $html, 1);
         }
 
         return $html.$extra;
+    }
+
+    /** image, audio, video, or file */
+    private function kind(Upload $upload): string
+    {
+        $mime = strtolower((string) $upload->mime_type);
+        $ext = strtolower(pathinfo($upload->original_name, PATHINFO_EXTENSION));
+        if (str_starts_with($mime, 'image/') || in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'], true)) {
+            return 'image';
+        }
+        if (str_starts_with($mime, 'audio/') || in_array($ext, ['mp3', 'm4a', 'wav', 'ogg', 'aac'], true)) {
+            return 'audio';
+        }
+        if (str_starts_with($mime, 'video/') || in_array($ext, ['mp4', 'mov', 'm4v', 'webm'], true)) {
+            return 'video';
+        }
+
+        return 'file';
+    }
+
+    /**
+     * Put $piece at the end of the page's last <div class="$class"> (these hold no inner divs).
+     *
+     * @return array{0: string, 1: int}|null  the new HTML and the offset just after that div, or null if the page has none
+     */
+    private function insertInto(string $html, string $class, string $piece): ?array
+    {
+        $open = strrpos($html, '<div class="'.$class.'">');
+        if ($open === false) {
+            return null;
+        }
+        $close = strpos($html, '</div>', $open);
+        if ($close === false) {
+            return null;
+        }
+        $html = substr($html, 0, $close).$piece.substr($html, $close);
+
+        return [$html, $close + strlen($piece) + strlen('</div>')];
+    }
+
+    /** Add a picture to the Full Screen button that follows its picture row */
+    private function addToFullScreen(string $html, int $from, string $url): string
+    {
+        if (! preg_match('/<div class="imgbtns"><button class="imgbtn" data-full="([^"]*)"/', $html, $m, PREG_OFFSET_CAPTURE, $from)
+            || $m[0][1] !== $from) {
+            return $html;
+        }
+        $at = $m[1][1] + strlen($m[1][0]);
+        $add = ($m[1][0] === '' ? '' : ',').e($url);
+
+        return substr($html, 0, $at).$add.substr($html, $at);
     }
 
     /**
