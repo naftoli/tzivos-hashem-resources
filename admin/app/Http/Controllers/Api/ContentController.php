@@ -15,6 +15,7 @@ use App\Support\FileScopes;
 use App\Support\PageFiles;
 use App\Support\SiteViewer;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 /** Pages, search, and file opens for the public Resources site. */
 class ContentController extends Controller
@@ -46,6 +47,7 @@ class ContentController extends Controller
         $scopes = FileScopes::load($site->id);
         $html = PageFiles::apply($block->html, $block->fileRules()->get(), $viewer->role, $scopes, $block->block_key);
         $html = $this->links->rewrite($html, $uploads, $viewer->role);
+        $html = PageFiles::viewLinks($html, rtrim((string) config('admin.site_api'), '?'));
         // a weekly feature this person may not see (Files dashboard): its uploads are not added either
         $part = $scopes->forPart($block->block_key);
         if (! $part || $part->visibleToRole($viewer->role)) {
@@ -126,7 +128,74 @@ class ContentController extends Controller
 
         ContentView::record($viewer, 'file', $upload->original_name, $upload->page_key, $upload->id, $upload->site_id);
 
+        $view = ! $download && $request->boolean('view');
+        if (! $download && ! $view && ! $this->mayOpen($upload, $viewer->role, true) && $this->isBarFile($upload)) {
+            // a Hachayol PDF this person may only view: only through the site's reader, not as a file the browser could save
+            return response()->json(['message' => 'Open it with View PDF on the site.'], 403);
+        }
+
+        if ($view) {
+            // the site's PDF reader: the file itself goes to siteApi.php, never an address the browser could keep
+            if (! Storage::disk('public')->exists($upload->stored_path)) {
+                return response()->json(['message' => 'The file could not be opened.'], 404);
+            }
+
+            return response()->file(Storage::disk('public')->path($upload->stored_path), self::viewHeaders($upload->mime_type ?: 'application/pdf'));
+        }
+
         return response()->json(['url' => $this->grants->url($upload, $viewer, 120, $download)]);
+    }
+
+    /**
+     * May this person view the Hachayol bar PDF at this address (a file on the site, like pdfs/666.pdf)?
+     * siteApi.php asks before it sends that file to the site's reader.
+     */
+    public function bar(Request $request)
+    {
+        $viewer = $this->viewer($request);
+        if ($viewer instanceof \Illuminate\Http\JsonResponse) {
+            return $viewer;
+        }
+        $href = (string) $request->query('href', '');
+        if (! PageFiles::isSitePath($href)) {
+            return response()->json(['message' => 'Not a file on the site.'], 404);
+        }
+
+        $site = $this->resources();
+        $scopes = FileScopes::load($site->id);
+        $found = false;
+        $blocks = PageBlock::where('site_id', $site->id)->where('html', 'like', '%class="hachayolbar"%')->get(['id', 'html']);
+        foreach ($blocks as $block) {
+            foreach (PageFiles::bars($block->html) as $bar) {
+                if (html_entity_decode($bar['href'], ENT_QUOTES) !== $href) {
+                    continue;
+                }
+                $found = true;
+                $own = PageFileRule::where('page_block_id', $block->id)->where('ref', 'link:'.$bar['href'])->first();
+                $rule = $own ?? ($bar['issue'] !== null ? $scopes->forIssue($bar['issue']) : null);
+                if ($rule && ! $rule->visibleToRole($viewer->role)) {
+                    return response()->json(['message' => "You don't have access to this file right now."], 403);
+                }
+            }
+        }
+        if (! $found) {
+            return response()->json(['message' => 'No Hachayol with that file.'], 404);
+        }
+        ContentView::record($viewer, 'file', basename($href), null, null, $site->id);
+
+        return response()->json(['ok' => true]);
+    }
+
+    /** Shown in the page, never saved: open inline, keep no copy */
+    public static function viewHeaders(string $type): array
+    {
+        return [
+            'Content-Type' => $type,
+            'Content-Disposition' => 'inline',
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, private',
+            'Pragma' => 'no-cache',
+            'X-Content-Type-Options' => 'nosniff',
+        ];
     }
 
     /**
@@ -184,6 +253,23 @@ class ContentController extends Controller
         }
 
         return true;
+    }
+
+    /** Is this upload the PDF of a Hachayol bar? */
+    private function isBarFile(Upload $upload): bool
+    {
+        $uploads = $this->uploads($upload->site_id);
+        $blocks = PageBlock::where('site_id', $upload->site_id)->where('html', 'like', '%class="hachayolbar"%')->get(['id', 'html']);
+        foreach ($blocks as $block) {
+            foreach (PageFiles::bars($block->html) as $bar) {
+                $hit = $this->links->uploadFor($bar['href'], $uploads);
+                if ($hit && $hit->id === $upload->id) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     private function viewer(Request $request): SiteViewer|\Illuminate\Http\JsonResponse

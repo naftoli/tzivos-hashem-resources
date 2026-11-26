@@ -107,6 +107,7 @@ Route::middleware(\App\Http\Middleware\ApiPageAccess::class)->group(function () 
     Route::get('/api/content/pages/{pageId}', [ApiContentController::class, 'page'])->where('pageId', '[^/]+')->name('api.content.page');
     Route::get('/api/content/search', [ApiContentController::class, 'search'])->name('api.content.search');
     Route::get('/api/content/files/{upload}', [ApiContentController::class, 'file'])->whereNumber('upload')->name('api.content.file');
+    Route::get('/api/content/bar', [ApiContentController::class, 'bar'])->name('api.content.bar');
 });
 
 // Uploaded files, at the address the app gives them (signed in + allowed level + inside its dates)

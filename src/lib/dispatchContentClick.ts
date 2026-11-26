@@ -1,6 +1,7 @@
 import type { MouseEvent } from 'react';
 import { hkCardShouldHide } from '@/lib/contentFilters';
 import { openTefPdf } from '@/lib/tefPdf';
+import { openPdfViewer } from '@/lib/pdfViewer';
 import TEFN from '@/data/static/TEFN.json';
 
 const TEFN_TYPED = TEFN as Record<string, number>;
@@ -150,6 +151,17 @@ export function dispatchContentClick(
       for (let p = 1; p <= n; p++) ids.push(`tefp_${sg}_${p < 10 ? '0' + p : p}`);
       if (ids.length) handlers.openLightbox(ids.join(','));
     }
+    return true;
+  }
+
+  // View PDF: the site's own reader, no download (Download PDF is a separate, normal link)
+  const pdfView = el.closest<HTMLAnchorElement>('a[data-pdfview]');
+  if (pdfView) {
+    event.preventDefault();
+    event.stopPropagation();
+    const bar = pdfView.closest('.hachayolbar');
+    const label = bar?.querySelector('.hb-i')?.textContent ?? 'Hachayol';
+    void openPdfViewer(pdfView.href, label.trim());
     return true;
   }
 
