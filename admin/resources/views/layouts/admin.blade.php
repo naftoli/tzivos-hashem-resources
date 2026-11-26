@@ -60,10 +60,11 @@
         .brand { height: 64px; flex: 0 0 64px; display: flex; align-items: center; gap: 12px; padding: 0 15px; background: var(--navy-2); white-space: nowrap; }
         .brand .logo { width: 42px; height: 42px; flex: 0 0 42px; border-radius: 10px; background: url('{{ asset('site-preview/assets/f90a774f9a601cdd.svg') }}') center / 34px no-repeat; }
         .brand span { color: #fff; font-weight: 600; font-size: 14px; opacity: 0; transition: opacity .15s; }
-        .side nav { flex: 1; padding: 12px 0; overflow-y: auto; overflow-x: hidden; }
-        .side h6 { margin: 18px 0 6px; padding: 0 26px; height: 14px; font-size: 10.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: #4c4e6f; white-space: nowrap; }
+        .side nav { flex: 1; padding: 6px 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; -ms-overflow-style: none; }
+        .side nav::-webkit-scrollbar { display: none; width: 0; height: 0; }
+        .side h6 { margin: 10px 0 2px; padding: 0 26px; height: 14px; font-size: 10.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: #4c4e6f; white-space: nowrap; }
         .side h6::before { content: ''; display: block; width: 20px; height: 1px; background: #33334a; margin-top: 7px; }
-        .side .item { display: flex; align-items: center; gap: 16px; height: 44px; padding: 0 25px; color: #a2a3b7; white-space: nowrap; font-size: 13px; font-weight: 500; border: 0; background: none; width: 100%; cursor: pointer; font-family: inherit; text-align: left; }
+        .side .item { display: flex; align-items: center; gap: 16px; height: 38px; padding: 0 25px; color: #a2a3b7; white-space: nowrap; font-size: 13px; font-weight: 500; border: 0; background: none; width: 100%; cursor: pointer; font-family: inherit; text-align: left; }
         .side .item svg { width: 22px; height: 22px; flex: 0 0 22px; fill: none; stroke: #494b74; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
         .side .item span { opacity: 0; transition: opacity .15s; }
         .side .item:hover { background: #1b1b28; color: #fff; }
@@ -74,7 +75,7 @@
         .side:hover h6::before, .side:focus-within h6::before { display: none; }
         .side h6 b { font-weight: inherit; display: none; }
         .side:hover h6 b, .side:focus-within h6 b { display: inline; }
-        .side form { margin: 0; padding: 8px 0 14px; border-top: 1px solid #2b2b40; }
+        .side form { margin: 0; padding: 4px 0 8px; border-top: 1px solid #2b2b40; }
 
         /* top bar */
         .main { margin-left: var(--side); min-height: 100vh; display: flex; flex-direction: column; }
