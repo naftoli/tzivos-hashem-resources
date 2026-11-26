@@ -9,6 +9,7 @@
         .file-drop-remove { border: 0; background: transparent; color: #d1213d; cursor: pointer; font: inherit; font-weight: 600; padding: 0 4px; line-height: 1; }
         .file-drop-remove:hover { color: #a10d24; }
         .act.red { background: #ffe2e5; color: #d1213d; width: auto; padding: 0 10px; font: inherit; font-size: 12px; font-weight: 600; }
+        .card-head .up-modes { margin-left: auto; height: 64px; }
         .act.blue-text { background: #e1f0ff; color: var(--blue); width: auto; padding: 0 10px; font: inherit; font-size: 12px; font-weight: 600; }
     </style>
 @endpush
@@ -24,9 +25,18 @@
         <div class="error">{{ $errors->first() }}</div>
     @endif
 
+    @php $hyMode = $canHachayol && request('mode') === 'hachayol'; @endphp
     <div class="card">
-        <div class="card-head"><h2>Upload</h2></div>
-        <div class="card-body">
+        <div class="card-head">
+            <h2>Upload</h2>
+            @if ($canHachayol)
+                <div class="tabs up-modes" role="tablist">
+                    <button type="button" role="tab" data-mode="files" class="{{ $hyMode ? '' : 'on' }}">Upload files</button>
+                    <button type="button" role="tab" data-mode="hachayol" class="{{ $hyMode ? 'on' : '' }}">Upload Full Hachayols</button>
+                </div>
+            @endif
+        </div>
+        <div class="card-body" data-panel="files" @if ($hyMode) hidden @endif>
             <form method="POST" action="{{ route('admin.uploads.store') }}" enctype="multipart/form-data" style="max-width:900px">
                 @csrf
                 @include('admin.uploads._fields', ['upload' => null])
@@ -41,6 +51,11 @@
                 <button type="submit" class="btn">Upload</button>
             </form>
         </div>
+        @if ($canHachayol)
+            <div class="card-body" data-panel="hachayol" @unless ($hyMode) hidden @endunless>
+                @include('admin.uploads._hachayol')
+            </div>
+        @endif
     </div>
 
     @if (isset($pendingUploads) && $pendingUploads->count())
@@ -285,7 +300,7 @@
         renderNames(box, input);
     }
 
-    Array.prototype.forEach.call(document.querySelectorAll('input[type=file]'), enhance);
+    Array.prototype.forEach.call(document.querySelectorAll('input[type=file]:not([data-hy])'), enhance);
 
     document.addEventListener('dragover', function (e) { if (isFileDrag(e)) e.preventDefault(); });
     document.addEventListener('drop', function (e) { if (isFileDrag(e)) e.preventDefault(); });
@@ -293,8 +308,8 @@
     document.addEventListener('paste', function (e) {
         var files = e.clipboardData && e.clipboardData.files;
         if (!files || !files.length) return;
-        var input = document.querySelector('input[type=file]');
-        if (!input) return;
+        var input = document.querySelector('input[type=file]:not([data-hy])');
+        if (!input || input.closest('[hidden]')) return;
         e.preventDefault();
         setFiles(input, files, true);
     });

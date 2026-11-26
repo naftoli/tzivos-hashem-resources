@@ -24,4 +24,10 @@ return [
 
     // Where the public site asks for a page, a search, or a file. Same folder as checkAuth.php.
     'site_api' => env('RESOURCES_SITE_API', '/resources/siteApi.php'),
+
+    // Upload Full Hachayols: the PDF tools on this server (poppler-utils). Full paths work too,
+    // e.g. C:\poppler\Library\bin\pdftotext.exe on Windows. ImageMagick is only used when pdftoppm is missing.
+    'pdftotext' => env('PDFTOTEXT_PATH', 'pdftotext'),
+    'pdftoppm' => env('PDFTOPPM_PATH', 'pdftoppm'),
+    'magick' => env('MAGICK_PATH', 'magick'),
 ];
