@@ -8,6 +8,42 @@
 
 let open: HTMLDivElement | null = null;
 
+/** The watermark: the signed-in person's email (set by AuthGate from checkAuth.php), or "Tzivos Hashem" */
+let mark = 'Tzivos Hashem';
+export function setWatermarkText(text: unknown): void {
+  mark = typeof text === 'string' && text.trim() !== '' ? text.trim() : 'Tzivos Hashem';
+}
+
+/** Faint diagonal repeated text, drawn onto the page picture itself */
+function bakeWatermark(canvas: HTMLCanvasElement): void {
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  const size = Math.max(14, Math.round(canvas.width / 28));
+  ctx.save();
+  ctx.font = `600 ${size}px system-ui, Arial, sans-serif`;
+  ctx.fillStyle = 'rgba(20, 30, 60, 0.13)';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.translate(canvas.width / 2, canvas.height / 2);
+  ctx.rotate(-Math.PI / 6);
+  const stepX = ctx.measureText(mark).width + size * 3;
+  const stepY = size * 5;
+  const reach = Math.hypot(canvas.width, canvas.height);
+  for (let y = -reach; y <= reach; y += stepY) {
+    const shift = (Math.round(y / stepY) % 2) * (stepX / 2);
+    for (let x = -reach; x <= reach; x += stepX) ctx.fillText(mark, x + shift, y);
+  }
+  ctx.restore();
+}
+
+/** The same watermark as a see-through layer over the page */
+function overlayStyle(): string {
+  const t = mark.replace(/[<>&"']/g, (c) => `&#${c.charCodeAt(0)};`);
+  const w = Math.max(260, mark.length * 11 + 80);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="150"><text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" transform="rotate(-30 ${w / 2} 75)" font-family="system-ui, Arial, sans-serif" font-size="18" font-weight="600" fill="rgba(20,30,60,0.10)">${t}</text></svg>`;
+  return `url("data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}")`;
+}
+
 function stopKeys(e: KeyboardEvent): void {
   if (!open) return;
   if (e.key === 'Escape') {
@@ -79,8 +115,15 @@ export async function openPdfViewer(url: string, title: string): Promise<void> {
       canvas.height = Math.floor(viewport.height);
       canvas.style.width = `${Math.floor(viewport.width / ratio)}px`;
       canvas.setAttribute('aria-label', `Page ${n}`);
-      pages.appendChild(canvas);
+      const sheet = document.createElement('div');
+      sheet.className = 'pdfv-sheet';
+      const layer = document.createElement('div');
+      layer.className = 'pdfv-mark';
+      layer.style.backgroundImage = overlayStyle();
+      sheet.append(canvas, layer);
+      pages.appendChild(sheet);
       await page.render({ canvas, viewport }).promise;
+      bakeWatermark(canvas);
     }
     void task.destroy();
   } catch {

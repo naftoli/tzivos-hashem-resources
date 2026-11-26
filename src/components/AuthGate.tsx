@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { phpUrl } from '@/lib/phpUrl';
+import { setWatermarkText } from '@/lib/pdfViewer';
 import type { TzhUser } from '@/types';
 
 const UserContext = createContext<TzhUser | null>(null);
@@ -25,6 +26,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
       })
       .then((data: TzhUser) => {
         if (data.success) {
+          setWatermarkText(data.email);   // View PDF watermark (falls back to "Tzivos Hashem")
           setUser(data);
           setReady(true);
         } else {

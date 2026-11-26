@@ -688,6 +688,8 @@ button.tp-r:hover{background:#F4F7FD;border-radius:8px}
 .pdfv-x:hover{background:var(--navy)}
 .pdfv-pages{flex:1;overflow:auto;display:flex;flex-direction:column;align-items:center;gap:14px;padding:6px 12px 28px}
 .pdfv-page{display:block;max-width:100%;height:auto;background:#fff;box-shadow:0 8px 30px rgba(0,0,0,.45);border-radius:4px;pointer-events:none}
+.pdfv-sheet{position:relative;max-width:100%}
+.pdfv-mark{position:absolute;inset:0;pointer-events:none;background-repeat:repeat}
 .pdfv-msg{color:#fff;font-family:system-ui,sans-serif;font-size:16px;margin-top:40px}
 html.pdfv-on{overflow:hidden}
 @media print{html.pdfv-on body{display:none !important}}
