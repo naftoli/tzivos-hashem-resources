@@ -367,14 +367,13 @@ class PageFileControlsTest extends TestCase
         $this->assertStringContainsString('pdfs/i667orders.pdf', $this->partAs('i667orders', 'teach@example.org'));
     }
 
-    public function test_who_can_see_for_full_covers_every_hachayol(): void
+    public function test_full_has_no_who_can_see_setting(): void
     {
         $this->weeklyParts();
-        $this->saveScope(['scope' => 'full', 'key' => 'hachayol', 'roles' => ['hq_staff'], 'download_roles' => ['hq_staff']])->assertRedirect();
-
-        $this->assertStringNotContainsString('hachayolbar', $this->pageAs('teach@example.org'));
-        $this->assertStringNotContainsString('pdfs/i667orders.pdf', $this->partAs('i667orders', 'teach@example.org'));
-        $this->assertStringContainsString('hachayolbar', $this->pageAs('staff@example.org'));
+        $this->saveScope(['scope' => 'full', 'key' => 'hachayol', 'roles' => ['hq_staff']])->assertNotFound();
+        $this->assertSame(0, FileScopeRule::count());
+        $html = $this->actingAs($this->admin)->get(route('admin.files'))->assertOk()->getContent();
+        $this->assertStringNotContainsString('name="scope" value="full"', $html);
     }
 
     public function test_only_hq_admin_changes_the_switches(): void

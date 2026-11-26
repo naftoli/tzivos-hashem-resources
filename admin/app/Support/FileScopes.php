@@ -11,7 +11,6 @@ use Illuminate\Support\Collection;
  * Which Files dashboard setting counts for a part of the site.
  *   one feature in one week (e.g. i666orders)  wins over
  *   the whole Hachayol issue (666) and the whole feature (orders); when both of those are set, a person must pass both.
- * When none of those is set, the setting for Full (every Hachayol) counts.
  * A setting on a single file (Site pages › Files) wins over all of these for that file.
  * A switch turned off (Full, a week, a feature) wins over everything and hides it for everyone.
  */
@@ -80,12 +79,12 @@ class FileScopes
             return $own;
         }
 
-        return self::both($this->rule('issue', $p[0]), $this->rule('feature', $p[1])) ?? $this->rule('full', 'hachayol');
+        return self::both($this->rule('issue', $p[0]), $this->rule('feature', $p[1]));
     }
 
     public function forIssue(string $num): ?object
     {
-        return $this->issueIsOff($num) ? self::off() : ($this->rule('issue', $num) ?? $this->rule('full', 'hachayol'));
+        return $this->issueIsOff($num) ? self::off() : $this->rule('issue', $num);
     }
 
     /** Hidden for everyone */
