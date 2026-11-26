@@ -125,10 +125,10 @@ class User extends Authenticatable
         return in_array($this->role, self::UPLOADERS, true);
     }
 
-    /** The News site level cannot use the admin site. */
+    /** Only HQ admin, HQ staff (and the Owner) can use the admin site. The other levels are only for what the public site shows. */
     public function canAccessAdminSite(): bool
     {
-        return $this->role !== 'news';
+        return $this->isHQ() || $this->isOwner();
     }
 
     public function isLastHqAdmin(): bool

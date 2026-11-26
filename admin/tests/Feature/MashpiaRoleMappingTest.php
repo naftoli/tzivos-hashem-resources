@@ -61,8 +61,10 @@ class MashpiaRoleMappingTest extends TestCase
 
     public function test_handoff_login_assigns_mapped_level(): void
     {
+        // the level is still set from Mashpia (it decides what the public site shows); Teachers can't use the admin
         $this->getHandoff('/login/mashpia/return', 'teacher@example.org', 'Ada', 'Teacher')
-            ->assertRedirect(route('dashboard'));
+            ->assertRedirect(route('login'));
+        $this->assertGuest();
         $user = User::where('email', 'teacher@example.org')->first();
         $this->assertNotNull($user);
         $this->assertSame('teacher', $user->role);
@@ -114,7 +116,8 @@ class MashpiaRoleMappingTest extends TestCase
     {
         config(['mashpia.mode' => 'mock', 'mashpia.mock_emails' => ['mock@example.org']]);
         $user = User::factory()->create(['email' => 'mock@example.org', 'role' => 'teacher', 'password' => 'password']);
-        $this->post('/login', ['email' => 'mock@example.org', 'password' => 'x'])->assertRedirect(route('dashboard'));
+        $this->post('/login', ['email' => 'mock@example.org', 'password' => 'x'])->assertRedirect(route('login'));
+        $this->assertGuest();
         $this->assertSame('teacher', $user->fresh()->role);
     }
 
@@ -149,11 +152,16 @@ class MashpiaRoleMappingTest extends TestCase
 
     public function test_other_levels_cannot_open_role_screens(): void
     {
-        foreach (['hq_staff', 'teacher', 'base'] as $role) {
+        $staff = User::factory()->create(['email' => 'hq_staff@example.org', 'role' => 'hq_staff']);
+        $this->actingAs($staff)->get(route('admin.roles'))->assertForbidden();
+        $this->actingAs($staff)->get(route('admin.mashpia-roles'))->assertForbidden();
+        $this->actingAs($staff)->get(route('admin.admin-requests'))->assertForbidden();
+        foreach (['teacher', 'base'] as $role) {
             $user = User::factory()->create(['email' => "{$role}@example.org", 'role' => $role]);
-            $this->actingAs($user)->get(route('admin.roles'))->assertForbidden();
-            $this->actingAs($user)->get(route('admin.mashpia-roles'))->assertForbidden();
-            $this->actingAs($user)->get(route('admin.admin-requests'))->assertForbidden();
+            foreach (['admin.roles', 'admin.mashpia-roles', 'admin.admin-requests'] as $name) {
+                $this->actingAs($user)->get(route($name))->assertRedirect(route('login'));
+                $this->assertGuest();
+            }
         }
         $news = User::factory()->create(['email' => 'news-blocked@example.org', 'role' => 'news']);
         $this->actingAs($news)->get(route('admin.roles'))->assertRedirect(route('login'));
@@ -203,7 +211,7 @@ class MashpiaRoleMappingTest extends TestCase
     public function test_teacher_cannot_request_admin(): void
     {
         $teacher = User::factory()->create(['email' => 'nope@example.org', 'role' => 'teacher', 'mashpia_role' => 'Teacher']);
-        $this->actingAs($teacher)->post(route('account.request-admin'))->assertSessionHasErrors('request');
+        $this->actingAs($teacher)->post(route('account.request-admin'))->assertRedirect(route('login'));
         $this->assertDatabaseCount('admin_access_requests', 0);
     }
 
@@ -249,7 +257,8 @@ class MashpiaRoleMappingTest extends TestCase
         ]);
         $this->withCookie('PHPSESSID', 'good-session-123')
             ->get('/login/mashpia')
-            ->assertRedirect(route('dashboard'));
+            ->assertRedirect(route('login'));
+        $this->assertGuest();
         $this->assertSame('teacher', User::where('email', 'sess@example.org')->first()->role);
     }
 

@@ -33,8 +33,6 @@ class AdminOnlyPagesTest extends TestCase
     {
         return [
             ['hq_staff', 'HQ staff'],
-            ['teacher', 'Teachers'],
-            ['base', 'Base commanders'],
         ];
     }
 
@@ -124,13 +122,13 @@ class AdminOnlyPagesTest extends TestCase
         $this->actingAs($staff)->get(route('admin.pages'))->assertOk();
         $this->actingAs($staff)->get(route('admin.uploads'))->assertOk();
 
-        $this->actingAs($teacher)->get(route('admin.pages'))->assertForbidden();
-        $this->actingAs($teacher)->get(route('admin.uploads'))->assertOk();
-        $this->actingAs($teacher)->get(route('dashboard'))->assertOk();
-
-        $this->actingAs($base)->get(route('admin.pages'))->assertForbidden();
-        $this->actingAs($base)->get(route('admin.uploads'))->assertOk();
-        $this->actingAs($base)->get(route('dashboard'))->assertOk();
+        // Only HQ admin and HQ staff use the admin site; Teachers and Base commanders are signed out like News site
+        foreach ([$teacher, $base] as $user) {
+            foreach (['dashboard', 'admin.pages', 'admin.uploads'] as $name) {
+                $this->actingAs($user)->get(route($name))->assertRedirect(route('login'));
+                $this->assertGuest();
+            }
+        }
 
         $this->actingAs($news)->get(route('dashboard'))->assertRedirect(route('login'));
         $this->assertGuest();

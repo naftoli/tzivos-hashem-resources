@@ -196,7 +196,7 @@ class PageBlockUndoTest extends TestCase
             'nudges' => '{}',
         ])->assertRedirect();
 
-        $this->actingAs($teacher)->post(route('admin.pages.block.undo', [$page, $block]))->assertForbidden();
+        $this->actingAs($teacher)->post(route('admin.pages.block.undo', [$page, $block]))->assertRedirect(route('login'));   // Teachers can't use the admin at all
         $this->assertStringContainsString('The hall', $block->fresh()->html);
 
         $this->actingAs($staff)->post(route('admin.pages.block.undo', [$page, $block]))->assertRedirect();

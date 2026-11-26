@@ -146,14 +146,11 @@ class UploadDeleteTest extends TestCase
         $other = $this->makeUpload($admin, 'admins.txt');
         $orphan = $this->makeUpload($admin, 'orphan.txt', uploadedBy: null);
 
-        $this->actingAs($teacher)->delete(route('admin.uploads.destroy', $other))->assertForbidden();
-        $this->actingAs($teacher)->delete(route('admin.uploads.destroy', $orphan))->assertForbidden();
+        // Teachers can't use the admin at all now
+        $this->actingAs($teacher)->delete(route('admin.uploads.destroy', $other))->assertRedirect(route('login'));
+        $this->actingAs($teacher)->delete(route('admin.uploads.destroy', $orphan))->assertRedirect(route('login'));
         $this->assertFalse($other->fresh()->trashed());
         $this->assertFalse($orphan->fresh()->trashed());
-
-        $html = $this->actingAs($teacher)->get(route('admin.uploads'))->assertOk()->getContent();
-        $this->assertStringNotContainsString(route('admin.uploads.destroy', $other), $html);
-        $this->assertStringNotContainsString(route('admin.uploads.destroy', $orphan), $html);
     }
 
     public function test_hq_staff_cannot_delete_or_restore_someone_elses_file(): void
@@ -209,24 +206,19 @@ class UploadDeleteTest extends TestCase
         $this->assertFalse($upload->fresh()->trashed());
     }
 
-    public function test_base_commander_can_delete_and_restore_their_own_file(): void
+    public function test_base_commander_can_no_longer_delete_their_own_file_and_it_stays(): void
     {
         $base = $this->baseCommander();
         $upload = $this->makeUpload($base, 'base-mine.txt');
         $upload->permissions()->create(['role' => 'base', 'mode' => 'always']);
 
-        $this->actingAs($base)->delete(route('admin.uploads.destroy', $upload))->assertRedirect(route('admin.uploads'));
-        $upload->refresh();
-        $this->assertTrue($upload->trashed());
-        $this->assertFalse((bool) $upload->deleted_by_admin);
-        $this->assertSame($base->id, $upload->deleted_by);
-
-        $this->actingAs($base)->post(route('admin.uploads.restore', $upload))->assertRedirect(route('admin.uploads'));
-        $upload->refresh();
-        $this->assertFalse($upload->trashed());
-        $this->assertNull($upload->deleted_by);
+        // Base commanders can't use the admin any more; their earlier upload is kept and HQ can manage it
+        $this->actingAs($base)->delete(route('admin.uploads.destroy', $upload))->assertRedirect(route('login'));
+        $this->assertGuest();
+        $this->assertFalse($upload->fresh()->trashed());
         Storage::disk('public')->assertExists($upload->stored_path);
-        $this->actingAs($base)->get($upload->publicPath())->assertOk();
+        $this->actingAs($this->hqAdmin())->delete(route('admin.uploads.destroy', $upload))->assertRedirect(route('admin.uploads'));
+        $this->assertTrue($upload->fresh()->trashed());
     }
 
     protected function hqAdmin(): User

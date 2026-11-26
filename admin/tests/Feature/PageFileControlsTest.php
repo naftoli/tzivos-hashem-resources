@@ -57,8 +57,8 @@ class PageFileControlsTest extends TestCase
     public function test_teachers_cannot_open_the_files_screen(): void
     {
         $teacher = User::where('email', 'teach@example.org')->first();
-        $this->actingAs($teacher)->get(route('admin.pages.block.files', [$this->page, $this->block]))->assertStatus(403);
-        $this->actingAs($teacher)->post(route('admin.pages.block.files.remove', [$this->page, $this->block]), ['ref' => 'link:guides/story.pdf'])->assertStatus(403);
+        $this->actingAs($teacher)->get(route('admin.pages.block.files', [$this->page, $this->block]))->assertRedirect(route('login'));
+        $this->actingAs($teacher)->post(route('admin.pages.block.files.remove', [$this->page, $this->block]), ['ref' => 'link:guides/story.pdf'])->assertRedirect(route('login'));
         $this->assertSame(0, PageFileRule::count());
     }
 

@@ -18,8 +18,8 @@ class StatsTest extends TestCase
         $staff = User::factory()->create(['email' => 'staff-stats@example.org', 'role' => 'hq_staff']);
         $admin = User::factory()->create(['email' => 'admin-stats@example.org', 'role' => 'hq_admin']);
 
-        $this->actingAs($teacher)->get(route('admin.stats'))->assertForbidden();
-        $this->actingAs($teacher)->get(route('admin.stats.csv'))->assertForbidden();
+        $this->actingAs($teacher)->get(route('admin.stats'))->assertRedirect(route('login'));   // Teachers can't use the admin at all
+        $this->actingAs($teacher)->get(route('admin.stats.csv'))->assertRedirect(route('login'));
         $this->actingAs($staff)->get(route('admin.stats'))->assertForbidden();
 
         $this->actingAs($admin)->get(route('admin.stats'))->assertOk()->assertSee('Most opened pages');
