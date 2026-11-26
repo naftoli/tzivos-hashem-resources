@@ -12,13 +12,21 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 
 /**
- * Upload files › Upload Full Hachayols: one or more whole Hachayol PDFs (or a folder of them).
+ * Upload Full Hachayols (its own button in the sidebar): one or more whole Hachayol PDFs (or a folder of them).
  * Each PDF is read (issue, date, Parsha, the "Peek inside" contents list) and split into its features,
  * shown in a preview where everything can be changed, and only then put on the site.
  * The PDFs wait in storage/app/hachayol-import/<batch>/ until they are published or discarded.
  */
 class HachayolImportController extends Controller
 {
+    /** The Upload Full Hachayols page: choose PDFs or a folder */
+    public function index()
+    {
+        return view('admin.hachayols.index', [
+            'hachayolTools' => ['text' => PdfTools::hasText(), 'pictures' => PdfTools::hasPictures()],
+        ]);
+    }
+
     /** Read one PDF (the page sends each file on its own, so big magazines don't hit the upload size limit together) */
     public function analyze(Request $request)
     {
@@ -77,7 +85,7 @@ class HachayolImportController extends Controller
         ], JSON_UNESCAPED_UNICODE));
 
         return response()->json(['ok' => true, 'name' => $name, 'issue' => $a['issue'], 'sections' => count($a['sections']),
-            'warnings' => $a['warnings'], 'preview' => route('admin.uploads.hachayol.preview', $request->input('batch'))]);
+            'warnings' => $a['warnings'], 'preview' => route('admin.hachayols.preview', $request->input('batch'))]);
     }
 
     /** The preview: every PDF read in this batch, each split into its sections, all editable */
@@ -95,10 +103,10 @@ class HachayolImportController extends Controller
             $items[] = $item;
         }
         if ($items === []) {
-            return redirect()->route('admin.uploads', ['mode' => 'hachayol'])->with('status', 'Nothing is waiting to be published.');
+            return redirect()->route('admin.hachayols')->with('status', 'Nothing is waiting to be published.');
         }
 
-        return view('admin.uploads.hachayol-preview', [
+        return view('admin.hachayols.preview', [
             'batch' => $batch,
             'items' => $items,
             'slots' => $slots,
@@ -175,18 +183,18 @@ class HachayolImportController extends Controller
         }
         $msg = $done ? 'Published '.implode('; ', $done).'.' : '';
         if ($errors) {
-            return redirect()->route('admin.uploads.hachayol.preview', $batch)->with('status', $msg)->withErrors(['pdf' => implode(' ', $errors)]);
+            return redirect()->route('admin.hachayols.preview', $batch)->with('status', $msg)->withErrors(['pdf' => implode(' ', $errors)]);
         }
         File::deleteDirectory($dir);
 
-        return redirect()->route('admin.uploads', ['mode' => 'hachayol'])->with('status', $msg);
+        return redirect()->route('admin.hachayols')->with('status', $msg);
     }
 
     public function discard(Request $request, string $batch)
     {
         File::deleteDirectory($this->dir($request, $batch));
 
-        return redirect()->route('admin.uploads', ['mode' => 'hachayol'])->with('status', 'Discarded. Nothing was added to the site.');
+        return redirect()->route('admin.hachayols')->with('status', 'Discarded. Nothing was added to the site.');
     }
 
     /** @return list<array> the PDFs read in this batch, oldest first */

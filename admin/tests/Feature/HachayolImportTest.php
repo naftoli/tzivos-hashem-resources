@@ -97,31 +97,51 @@ class HachayolImportTest extends TestCase
         $this->assertNull(HachayolParser::featureOf('Conversations on the Inside'));
     }
 
-    // ---- the Upload files page ----
+    // ---- the Upload Full Hachayols page and Upload files ----
 
-    public function test_hq_sees_the_upload_full_hachayols_tab(): void
+    public function test_upload_full_hachayols_has_its_own_page_and_sidebar_button(): void
     {
-        $this->actingAs($this->user('hq_staff'))->get(route('admin.uploads'))
-            ->assertOk()->assertSee('Upload Full Hachayols')->assertSee('webkitdirectory', false)->assertSee('Choose a folder');
-        $this->actingAs($this->user('hq_admin'))->get(route('admin.uploads', ['mode' => 'hachayol']))
-            ->assertOk()->assertSee('data-panel="hachayol"', false);
+        foreach (['hq_admin', 'hq_staff'] as $role) {
+            $page = $this->actingAs($this->user($role))->get('/admin/hachayols')->assertOk();
+            $page->assertSee('<title>Upload Full Hachayols | Resources Admin</title>', false)
+                ->assertSee('webkitdirectory', false)->assertSee('Choose a folder')->assertSee('Choose PDFs')
+                ->assertSee('data-analyze="'.route('admin.hachayols.analyze').'"', false);
+            $this->assertMatchesRegularExpression('#<a class="item\s+on\s*" href="'.preg_quote(route('admin.hachayols'), '#').'" title="Upload Full Hachayols">#', $page->getContent(), 'its sidebar button is lit');
+            $this->assertMatchesRegularExpression('#<a class="item\s*" href="'.preg_quote(route('admin.uploads'), '#').'" title="Upload files">#', $page->getContent(), 'Upload files is not lit');
+        }
+        $this->post('/logout');
+        $this->get('/admin/hachayols')->assertRedirect(route('login'));
+    }
+
+    public function test_upload_files_is_back_to_plain_file_uploads(): void
+    {
+        $page = $this->actingAs($this->user('hq_admin'))->get(route('admin.uploads'))->assertOk();
+        $page->assertDontSee('data-mode="hachayol"', false)->assertDontSee('webkitdirectory', false)->assertDontSee('Read and split')
+            ->assertSee('href="'.route('admin.hachayols').'" title="Upload Full Hachayols"', false);   // only the sidebar button
+    }
+
+    public function test_teachers_and_bases_cannot_open_upload_full_hachayols(): void
+    {
+        foreach (['teacher', 'base'] as $role) {
+            $this->actingAs($this->user($role))->get('/admin/hachayols')->assertRedirect(route('login'));
+        }
     }
 
     public function test_only_hq_can_use_the_importer(): void
     {
         foreach (['teacher', 'base'] as $role) {
             $user = $this->user($role);
-            $this->actingAs($user)->post(route('admin.uploads.hachayol.analyze'), ['batch' => self::BATCH])->assertRedirect(route('login'));
-            $this->actingAs($user)->get(route('admin.uploads.hachayol.preview', self::BATCH))->assertRedirect(route('login'));
-            $this->actingAs($user)->post(route('admin.uploads.hachayol.publish', self::BATCH))->assertRedirect(route('login'));
+            $this->actingAs($user)->post(route('admin.hachayols.analyze'), ['batch' => self::BATCH])->assertRedirect(route('login'));
+            $this->actingAs($user)->get(route('admin.hachayols.preview', self::BATCH))->assertRedirect(route('login'));
+            $this->actingAs($user)->post(route('admin.hachayols.publish', self::BATCH))->assertRedirect(route('login'));
         }
-        $this->post(route('admin.uploads.hachayol.analyze'), ['batch' => self::BATCH])->assertRedirect(route('login'));
+        $this->post(route('admin.hachayols.analyze'), ['batch' => self::BATCH])->assertRedirect(route('login'));
     }
 
     public function test_it_refuses_a_file_that_is_not_a_pdf(): void
     {
         $this->actingAs($this->user('hq_admin'))
-            ->post(route('admin.uploads.hachayol.analyze'), ['batch' => self::BATCH, 'pdf' => UploadedFile::fake()->create('notes.docx', 10)])
+            ->post(route('admin.hachayols.analyze'), ['batch' => self::BATCH, 'pdf' => UploadedFile::fake()->create('notes.docx', 10)])
             ->assertStatus(422)->assertJson(['ok' => false, 'message' => 'Not a PDF.']);
     }
 
@@ -130,7 +150,7 @@ class HachayolImportTest extends TestCase
         config(['admin.pdftotext' => '/nonexistent/pdftotext']);
         PdfTools::forget();
         $this->actingAs($this->user('hq_admin'))
-            ->post(route('admin.uploads.hachayol.analyze'), ['batch' => self::BATCH, 'pdf' => UploadedFile::fake()->create('681.pdf', 10, 'application/pdf')])
+            ->post(route('admin.hachayols.analyze'), ['batch' => self::BATCH, 'pdf' => UploadedFile::fake()->create('681.pdf', 10, 'application/pdf')])
             ->assertStatus(422)->assertJson(['ok' => false, 'message' => PdfTools::MISSING_TEXT]);
     }
 
@@ -139,8 +159,8 @@ class HachayolImportTest extends TestCase
         $owner = $this->user('hq_admin');
         $dir = storage_path('app/hachayol-import/'.$owner->id.'-'.self::BATCH);
         File::ensureDirectoryExists($dir);
-        $this->actingAs($this->user('hq_staff', 'other@example.org'))->get(route('admin.uploads.hachayol.preview', self::BATCH))->assertNotFound();
-        $this->actingAs($owner)->delete(route('admin.uploads.hachayol.discard', self::BATCH))->assertRedirect(route('admin.uploads', ['mode' => 'hachayol']));
+        $this->actingAs($this->user('hq_staff', 'other@example.org'))->get(route('admin.hachayols.preview', self::BATCH))->assertNotFound();
+        $this->actingAs($owner)->delete(route('admin.hachayols.discard', self::BATCH))->assertRedirect(route('admin.hachayols'));
         $this->assertDirectoryDoesNotExist($dir);
     }
 
@@ -151,24 +171,24 @@ class HachayolImportTest extends TestCase
         [$admin, $original] = $this->siteWithout681();
 
         // 1. upload + read
-        $res = $this->actingAs($admin)->post(route('admin.uploads.hachayol.analyze'), ['batch' => self::BATCH, 'pdf' => $this->upload('681.pdf')]);
+        $res = $this->actingAs($admin)->post(route('admin.hachayols.analyze'), ['batch' => self::BATCH, 'pdf' => $this->upload('681.pdf')]);
         $res->assertOk()->assertJson(['ok' => true, 'issue' => '681', 'sections' => 7]);
-        $this->assertSame(route('admin.uploads.hachayol.preview', self::BATCH), $res->json('preview'));
+        $this->assertSame(route('admin.hachayols.preview', self::BATCH), $res->json('preview'));
 
         // 2. preview: everything is there and editable
-        $page = $this->actingAs($admin)->get(route('admin.uploads.hachayol.preview', self::BATCH))->assertOk();
+        $page = $this->actingAs($admin)->get(route('admin.hachayols.preview', self::BATCH))->assertOk();
         $page->assertSee('Hachayol #681')->assertSee('21 Shvat 5787')->assertSee('Parshas Yisro')
             ->assertSee('value="dpYisro" data-english="Yisro" selected', false)
             ->assertSee('Conversations on the Inside')->assertSee('Mission')->assertSee('name="_token"', false);
         $id = $this->itemId($admin);
-        $this->actingAs($admin)->get(route('admin.uploads.hachayol.thumb', [self::BATCH, $id, 3]))->assertOk();
+        $this->actingAs($admin)->get(route('admin.hachayols.thumb', [self::BATCH, $id, 3]))->assertOk();
 
         // 3. publish, with one change and one feature switched off
         $form = $this->formFrom($admin, $id);
         $form['issues'][$id]['sections'][2]['title'] = 'My edited title';   // Orders from Our General
         $form['issues'][$id]['sections'][3]['on'] = '';   // Chassidishe Frames stays off
-        $this->actingAs($admin)->post(route('admin.uploads.hachayol.publish', self::BATCH), $form)
-            ->assertRedirect(route('admin.uploads', ['mode' => 'hachayol']))
+        $this->actingAs($admin)->post(route('admin.hachayols.publish', self::BATCH), $form)
+            ->assertRedirect(route('admin.hachayols'))
             ->assertSessionHas('status', fn ($s) => str_contains($s, 'Hachayol #681 (Parshas Yisro): 6 section(s)'));
 
         // the feature pages, laid out like last week's
@@ -224,16 +244,16 @@ class HachayolImportTest extends TestCase
         $this->needsPdfTools();
         $this->importDatePages();   // Yisro already has #681
         $admin = $this->user('hq_admin');
-        $this->actingAs($admin)->post(route('admin.uploads.hachayol.analyze'), ['batch' => self::BATCH, 'pdf' => $this->upload('681.pdf')])->assertOk();
+        $this->actingAs($admin)->post(route('admin.hachayols.analyze'), ['batch' => self::BATCH, 'pdf' => $this->upload('681.pdf')])->assertOk();
         $before = PageBlock::where('block_key', 'dpYisro')->value('html');
         $id = $this->itemId($admin);
 
-        $this->actingAs($admin)->get(route('admin.uploads.hachayol.preview', self::BATCH))->assertOk()
+        $this->actingAs($admin)->get(route('admin.hachayols.preview', self::BATCH))->assertOk()
             ->assertSee('already has Hachayol #681');
         $form = $this->formFrom($admin, $id);
         $form['issues'][$id]['on'] = '1';
-        $this->actingAs($admin)->post(route('admin.uploads.hachayol.publish', self::BATCH), $form)
-            ->assertRedirect(route('admin.uploads.hachayol.preview', self::BATCH))
+        $this->actingAs($admin)->post(route('admin.hachayols.publish', self::BATCH), $form)
+            ->assertRedirect(route('admin.hachayols.preview', self::BATCH))
             ->assertSessionHasErrors('pdf');
         $this->assertSame($before, PageBlock::where('block_key', 'dpYisro')->value('html'));
         $this->assertSame(0, Upload::count());

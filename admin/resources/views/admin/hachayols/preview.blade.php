@@ -74,7 +74,7 @@
             <p>{{ count($items) }} Hachayol PDF(s) read. Change anything below, untick what should not go on the site, then Publish.</p>
         </div>
         <div class="right">
-            <a class="btn light" href="{{ route('admin.uploads', ['mode' => 'hachayol']) }}">+ Add more PDFs</a>
+            <a class="btn light" href="{{ route('admin.hachayols') }}">+ Add more PDFs</a>
         </div>
     </div>
 
@@ -82,7 +82,7 @@
         <div class="error">{{ \App\Support\Hachayol\PdfTools::MISSING_PICTURES }}</div>
     @endunless
 
-    <form method="POST" action="{{ route('admin.uploads.hachayol.publish', $batch) }}" id="hpForm">
+    <form method="POST" action="{{ route('admin.hachayols.publish', $batch) }}" id="hpForm">
         @csrf
         @foreach ($items as $item)
             @php
@@ -91,7 +91,7 @@
                 $slot = $slots[$item['slot']] ?? null;
                 $taken = $slot && $slot['issue'] !== null;
                 $on = ! $taken && $a['issue'] !== null && $slot !== null;
-                $thumb = fn ($p) => $item['thumbs'] ? route('admin.uploads.hachayol.thumb', [$batch, $id, $p]) : null;
+                $thumb = fn ($p) => $item['thumbs'] ? route('admin.hachayols.thumb', [$batch, $id, $p]) : null;
             @endphp
             <section class="hp-issue {{ $on ? '' : 'is-off' }}" data-issue>
                 <div class="hp-head">
@@ -197,7 +197,7 @@
             </div>
         </div>
     </form>
-    <form method="POST" action="{{ route('admin.uploads.hachayol.discard', $batch) }}" id="hpDiscard" onsubmit="return confirm('Discard these PDFs? Nothing will be added to the site.')">
+    <form method="POST" action="{{ route('admin.hachayols.discard', $batch) }}" id="hpDiscard" onsubmit="return confirm('Discard these PDFs? Nothing will be added to the site.')">
         @csrf
         @method('DELETE')
     </form>

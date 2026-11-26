@@ -1,4 +1,4 @@
-{{-- Upload files › Upload Full Hachayols: whole Hachayol PDFs or a folder of them. Each is read and split; the preview comes next. --}}
+{{-- Upload Full Hachayols: whole Hachayol PDFs or a folder of them. Each is read and split; the preview comes next. --}}
 <style>
     .hy { max-width: 980px; }
     .hy-lead { margin: 0 0 18px; color: #5e6278; font-size: 13px; line-height: 1.6; max-width: 760px; }
@@ -13,7 +13,10 @@
     .hy-pick input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
     .btn svg { width: 16px; height: 16px; }
     .hy-queue { margin: 20px 0 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
-    .hy-queue[hidden] { display: none; }
+    .hy [hidden] { display: none !important; }
+    .hy .act.blue-text { width: auto; display: inline-flex; align-items: center; height: 28px; border: 0; border-radius: 6px; background: #e1f0ff; color: var(--blue); padding: 0 10px; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .hy .file-drop-remove { border: 0; background: transparent; color: #d1213d; cursor: pointer; font: inherit; font-weight: 600; padding: 0 4px; line-height: 1; }
+    .hy .file-drop-remove:hover { color: #a10d24; }
     .hy-queue-head { display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: #fafbfd; border-bottom: 1px solid var(--line); font-weight: 600; color: #181c32; font-size: 13px; }
     .hy-queue-head .sub { color: var(--muted); font-weight: 500; font-size: 12px; }
     .hy-queue-head .right { margin-left: auto; display: flex; gap: 8px; }
@@ -37,7 +40,7 @@
     @media (max-width: 760px) { .hy-steps { grid-template-columns: 1fr; } .hy-row { grid-template-columns: 34px 1fr auto; } .hy-row .msg { grid-column: 2 / -1; text-align: left; } }
 </style>
 
-<div class="hy" id="hy" data-analyze="{{ route('admin.uploads.hachayol.analyze') }}" data-batch="{{ \Illuminate\Support\Str::random(16) }}">
+<div class="hy" id="hy" data-analyze="{{ route('admin.hachayols.analyze') }}" data-token="{{ csrf_token() }}" data-batch="{{ \Illuminate\Support\Str::random(16) }}">
     <p class="hy-lead">Add whole Hachayol magazines. Each PDF is read and put in its week, split into its features, with the text and page pictures for each one. You check everything in a preview before anything goes on the site.</p>
 
     @if ($hachayolTools && ! $hachayolTools['text'])
@@ -78,21 +81,10 @@
 (function () {
     var root = document.getElementById('hy');
     if (!root) return;
-    var token = document.querySelector('input[name=_token]').value;
+    var token = root.dataset.token;
     var queue = [];
     var busy = false;
     var rows = document.getElementById('hyRows');
-
-    // Upload files / Upload Full Hachayols
-    document.querySelectorAll('.up-modes [data-mode]').forEach(function (b) {
-        b.addEventListener('click', function () {
-            document.querySelectorAll('.up-modes [data-mode]').forEach(function (x) { x.classList.toggle('on', x === b); });
-            document.querySelectorAll('[data-panel]').forEach(function (p) { p.hidden = p.dataset.panel !== b.dataset.mode; });
-            var u = new URL(location.href);
-            if (b.dataset.mode === 'hachayol') u.searchParams.set('mode', 'hachayol'); else u.searchParams.delete('mode');
-            history.replaceState(null, '', u);
-        });
-    });
 
     function size(n) { return n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; }
     function isPdf(f) { return /\.pdf$/i.test(f.name); }

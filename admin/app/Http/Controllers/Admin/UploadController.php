@@ -48,10 +48,6 @@ class UploadController extends Controller
             'pendingUploads' => $pendingUploads,
             'deletedUploads' => $deleted->get(),
             'perms' => $this->formDefaults(null),
-            'canHachayol' => $user->isHQ(),
-            'hachayolTools' => $user->isHQ()
-                ? ['text' => \App\Support\Hachayol\PdfTools::hasText(), 'pictures' => \App\Support\Hachayol\PdfTools::hasPictures()]
-                : null,
         ]);
     }
 
