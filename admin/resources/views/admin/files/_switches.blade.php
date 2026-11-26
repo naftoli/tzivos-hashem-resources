@@ -5,7 +5,7 @@
 @endphp
 <div class="card" id="switches">
     <div class="card-head"><h2>Full and features</h2><div class="right"><span class="sub" id="swStatus" aria-live="polite"></span></div></div>
-    <div class="card-body" style="padding-top:4px">
+    <div class="card-body">
         <div class="sw-view" id="swList">
             @foreach ($items as $it)
                 <div class="sw-row">
@@ -97,7 +97,12 @@
         document.querySelectorAll('[data-sub]').forEach(el => {
             const key = el.dataset.sub;
             const ws = weeksOf(key), on = ws.filter(w => weekOn(key, w.id)).length;
-            el.textContent = (isOn(key) ? 'On' : 'Off') + ' · ' + on + ' of ' + ws.length + ' weeks';
+            const pill = document.createElement('span');
+            pill.className = 'sw-state ' + (isOn(key) ? 'on' : 'off');
+            pill.textContent = isOn(key) ? 'On' : 'Off';
+            el.replaceChildren(pill, document.createTextNode(' · ' + on + ' of ' + ws.length + ' weeks'));
+            const row = el.closest('.sw-row');
+            if (row) row.classList.toggle('is-off', !isOn(key));
         });
         document.querySelectorAll('[data-weeks-count]').forEach(el => {
             const key = el.dataset.weeksCount, ws = weeksOf(key);
