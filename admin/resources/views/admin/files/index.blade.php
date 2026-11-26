@@ -138,7 +138,7 @@
             <summary>How visibility rules work <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></summary>
             <div class="fx-help-body">
                 <p><b>Which setting wins:</b> a setting on a single file wins over everything. Next comes a feature in one week. Otherwise the whole Hachayol and the whole feature both count: a person must be allowed by both. HQ admin always sees everything.</p>
-                <p><b>On / off:</b> Full and each feature also have a switch. Turning a switch off hides it on the site for everyone, without unticking who can see it. Full off hides every Hachayol; a feature off hides that feature. Choose weeks sets which weeks it shows.</p>
+                <p><b>On / off:</b> Full and each feature also have a switch. Turning a switch off hides it on the site for everyone, without unticking who can see it. Full off hides every Hachayol and turns every feature off with it (Full on turns them all back on); a feature off hides that feature. Sections that are only in some weeks (like Tanya Baal Peh) have their own switch too. Choose weeks sets which weeks it shows.</p>
                 <p>All levels ticked and no dates means everyone, at any time.</p>
             </div>
         </details>

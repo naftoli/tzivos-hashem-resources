@@ -76,6 +76,12 @@ class PageFiles
             },
             $html
         ) ?? $html;
+        // Picture-only Hachayol cards (e.g. Tanya Baal Peh): Full, the week, their own switch, who can see and Remove
+        $html = PictureCards::filter($html, function (string $part) use ($scopes, $role) {
+            $a = $scopes->forPart($part);
+
+            return ! $a || $a->visibleToRole($role);
+        });
 
         return self::splitBars($html, $byRef, $role, $scopes);
     }
