@@ -21,7 +21,7 @@
                     <tbody>
                     @foreach ($pages as $page)
                         <tr class="row">
-                            <td class="primary"><a href="{{ route('admin.pages.show', $page) }}">{{ $page->slug }}</a></td>
+                            <td class="primary"><a href="{{ route('admin.pages.show', $page) }}">{{ ucfirst($page->slug) }}</a></td>
                             <td class="num">{{ $page->blocks_count }}</td>
                             <td>{{ optional($page->imported_at)->format('M j, Y g:i A') }}</td>
                             <td class="acts"><a class="act" href="{{ route('admin.pages.show', $page) }}" title="Open"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></a></td>

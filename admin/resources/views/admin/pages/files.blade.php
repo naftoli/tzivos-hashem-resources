@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Files | ' . $block->block_key . ' | ' . $page->slug . ' | Resources Admin')
+@section('title', 'Files | ' . $block->block_key . ' | ' . ucfirst($page->slug) . ' | Resources Admin')
 @section('page-title', 'Site pages')
 
 @push('head')
@@ -20,7 +20,7 @@
 @endpush
 
 @section('content')
-    <div class="crumbs"><a href="{{ route('admin.pages') }}">Site pages</a> › <a href="{{ route('admin.pages.show', $page) }}">{{ $page->slug }}</a> › <a href="{{ route('admin.pages.block', [$page, $block]) }}">{{ $block->block_key }}</a> › Files</div>
+    <div class="crumbs"><a href="{{ route('admin.pages') }}">Site pages</a> › <a href="{{ route('admin.pages.show', $page) }}">{{ ucfirst($page->slug) }}</a> › <a href="{{ route('admin.pages.block', [$page, $block]) }}">{{ $block->block_key }}</a> › Files</div>
 
     @if (session('status'))
         <div class="ok">{{ session('status') }}</div>
@@ -32,7 +32,7 @@
     <div class="card">
         <div class="card-head">
             <div>
-                <h2>Files on {{ $page->slug }} / {{ $block->block_key }}</h2>
+                <h2>Files on {{ ucfirst($page->slug) }} / {{ $block->block_key }}</h2>
                 <div class="meta">{{ $block->heading() }}</div>
             </div>
             <div class="right"><a class="btn light" href="{{ route('admin.pages.block', [$page, $block]) }}">Back to the page</a></div>

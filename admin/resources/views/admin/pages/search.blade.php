@@ -15,7 +15,7 @@
                     <tbody>
                     @forelse ($results as $res)
                         <tr class="row">
-                            <td><span class="pill blue">{{ $res['page']->slug }}</span></td>
+                            <td><span class="pill blue">{{ ucfirst($res['page']->slug) }}</span></td>
                             <td class="primary"><a href="{{ route('admin.pages.block', [$res['page'], $res['id']]) }}">{{ $res['key'] }}</a></td>
                             <td>{{ $res['heading'] }}</td>
                             <td class="muted" dir="auto">{{ $res['snippet'] }}</td>
