@@ -14,7 +14,7 @@ use Illuminate\Http\Request;
 /**
  * Files dashboard: who can see (and download), and when, for a whole Hachayol issue,
  * one feature in one week, or a whole feature across all weeks. Single files are set on Site pages › Files.
- * Nothing here deletes a file from the server.
+ * Remove takes one off the site (Restore brings it back); nothing here deletes a file from the server.
  */
 class FileDashboardController extends Controller
 {
@@ -39,6 +39,13 @@ class FileDashboardController extends Controller
                 }
             }
         }
+
+        $removedFiles = \App\Models\PageFileRule::whereIn('page_block_id', array_map(fn ($f) => $f['block']->id, $found))
+            ->where('removed', true)->get()->map(fn ($r) => $r->page_block_id.'|'.$r->ref)->flip();
+        foreach ($found as &$f) {
+            $f['removed'] = isset($removedFiles[$f['block']->id.'|'.$f['file']['ref']]);
+        }
+        unset($f);
 
         return view('admin.files.index', [
             'switches' => FileVisibilityController::switchesFor($site->id, $issues, $features),
@@ -87,6 +94,59 @@ class FileDashboardController extends Controller
         $anchor = $scope === 'feature' ? 'switch-feature-'.$key : $scope.'-'.$key;   // back to the open feature
 
         return redirect()->to(strtok(url()->previous(), '#').'#'.$anchor)->with('status', 'Saved '.$name.'.');
+    }
+
+    /**
+     * Remove a whole Hachayol, a whole feature, or one feature in one week from the site, for everyone (HQ admin too).
+     * Its cards, Hachayol bar, files and pages go from the site; its settings stay, so Restore brings it back as it was.
+     * The page text and the files on the server are not deleted.
+     */
+    public function remove(Request $request)
+    {
+        [$scope, $key, $name] = $this->target($request);
+        $rule = FileScopeRule::firstOrNew(['site_id' => CurrentSite::get()->id, 'scope' => $scope, 'scope_key' => $key]);
+        $rule->fill(['removed' => true, 'updated_by' => $request->user()->id])->save();
+
+        return $this->back($scope, $key, 'Removed '.$name.' from the site. You can restore it here.');
+    }
+
+    public function restore(Request $request)
+    {
+        [$scope, $key, $name] = $this->target($request);
+        $rule = FileScopeRule::where('site_id', CurrentSite::get()->id)->where('scope', $scope)->where('scope_key', $key)->first();
+        if ($rule) {
+            $rule->fill(['removed' => false, 'updated_by' => $request->user()->id])->save();
+            if ($scope !== 'part' && $rule->isPlain()) {
+                $rule->delete();
+            }
+        }
+
+        return $this->back($scope, $key, 'Restored '.$name.'.');
+    }
+
+    /** @return array{0: string, 1: string, 2: string} scope, key, name */
+    private function target(Request $request): array
+    {
+        [$issues, $features] = $this->structure(CurrentSite::get()->id);
+        $scope = (string) $request->input('scope');
+        $key = (string) $request->input('key');
+        $part = FileScopes::partOf($key);
+        $name = match (true) {
+            $scope === 'issue' && isset($issues[$key]) => $issues[$key]['label'],
+            $scope === 'feature' && isset($features[$key]) => $features[$key]['name'].' (all weeks)',
+            $scope === 'part' && $part && isset($issues[$part[0]]['parts'][$key]) => ($features[$part[1]]['name'] ?? $part[1]).' · '.$issues[$part[0]]['label'],
+            default => null,
+        };
+        abort_if($name === null, 404);
+
+        return [$scope, $key, $name];
+    }
+
+    private function back(string $scope, string $key, string $message)
+    {
+        $anchor = $scope === 'feature' ? 'feature-'.$key : $scope.'-'.$key;
+
+        return redirect()->to(strtok(url()->previous(), '#').'#'.$anchor)->with('status', $message);
     }
 
     /** Back to the broader settings (feature in one week only) */

@@ -43,6 +43,11 @@
                         </button>
                         <span class="sw-pill" data-state="{{ $key }}"></span>
                         <div class="sw-cover"><span class="sw-bar"><span data-bar="{{ $key }}"></span></span><span class="sw-sub" data-sub="{{ $key }}"></span></div>
+                        @php $gone = (bool) ($rules['feature:'.$it['id']] ?? null)?->removed; @endphp
+                        <div class="sw-card-foot">
+                            @if ($gone)<span class="fx-pill removed">Removed from the site</span>@endif
+                            @include('admin.files._remove', ['action' => route('admin.files.remove'), 'restore' => route('admin.files.restore'), 'removed' => $gone, 'name' => $it['name'].' (all weeks)', 'fields' => ['scope' => 'feature', 'key' => $it['id']]])
+                        </div>
                     </div>
             @endif
         @endforeach

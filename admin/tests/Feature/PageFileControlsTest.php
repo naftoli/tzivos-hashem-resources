@@ -401,6 +401,163 @@ class PageFileControlsTest extends TestCase
         $this->asPerson('staff@example.org')->getJson('/api/content/bar?href=pdfs/666.pdf')->assertOk();
     }
 
+    // ---- Remove buttons on the Files page ----
+
+    private function removeScope(array $data, string $route = 'admin.files.remove')
+    {
+        return $this->actingAs($this->admin)->from(route('admin.files'))->post(route($route), $data);
+    }
+
+    public function test_every_box_on_the_files_page_has_a_remove_button(): void
+    {
+        $this->weeklyParts();
+        $html = $this->actingAs($this->admin)->get(route('admin.files', ['q' => 'story']))->assertOk()->getContent();
+
+        // 2 feature cards + 2 whole-feature cards + 1 Hachayol (666) + 1 (667) + 3 features in a Hachayol + single file results
+        $this->assertGreaterThanOrEqual(9, substr_count($html, 'class="fx-rm"'));
+        $this->assertStringContainsString('data-confirm="Remove Hachayol #666 · Parshas Noach from the site?', $html);
+        $this->assertStringContainsString('data-confirm="Remove Orders from Our General (all weeks) from the site?', $html);
+        $this->assertStringContainsString('data-confirm="Remove Orders from Our General · Hachayol #666 · Parshas Noach from the site?', $html);
+        $this->assertStringContainsString('action="'.route('admin.pages.block.files.remove', [$this->page, $this->block]).'"', $html);
+        $this->assertStringContainsString('name="ref" value="link:guides/story.pdf"', $html);
+        $this->assertStringContainsString('Remove takes a box off the site (Restore brings it back). No file is deleted from the server.', $html);
+    }
+
+    public function test_only_hq_admin_can_remove_or_restore(): void
+    {
+        $this->weeklyParts();
+        $staff = User::where('email', 'staff@example.org')->first();
+        $teacher = User::where('email', 'teach@example.org')->first();
+        $this->actingAs($staff)->post(route('admin.files.remove'), ['scope' => 'issue', 'key' => '666'])->assertStatus(403);
+        $this->actingAs($staff)->post(route('admin.files.restore'), ['scope' => 'issue', 'key' => '666'])->assertStatus(403);
+        $this->actingAs($teacher)->post(route('admin.files.remove'), ['scope' => 'feature', 'key' => 'orders'])->assertRedirect(route('login'));
+        $this->post(route('admin.files.remove'), ['scope' => 'part', 'key' => 'i666orders'])->assertRedirect(route('login'));
+        $this->assertSame(0, FileScopeRule::count());
+    }
+
+    public function test_remove_needs_the_csrf_token(): void
+    {
+        // the routes are in the "web" group, which checks the CSRF token (the forms send @csrf)
+        $this->assertContains('web', app('router')->getRoutes()->getByName('admin.files.remove')->gatherMiddleware());
+        $this->assertContains('web', app('router')->getRoutes()->getByName('admin.files.restore')->gatherMiddleware());
+    }
+
+    public function test_something_not_on_the_site_cannot_be_removed(): void
+    {
+        $this->weeklyParts();
+        $this->removeScope(['scope' => 'issue', 'key' => '999'])->assertNotFound();
+        $this->removeScope(['scope' => 'feature', 'key' => 'nothing'])->assertNotFound();
+        $this->removeScope(['scope' => 'part', 'key' => 'i666nothing'])->assertNotFound();
+        $this->removeScope(['scope' => 'full', 'key' => 'hachayol'])->assertNotFound();
+        $this->assertSame(0, FileScopeRule::count());
+    }
+
+    public function test_removing_a_whole_hachayol_takes_its_bar_cards_features_and_files_off_the_site(): void
+    {
+        $this->weeklyParts();
+        $this->removeScope(['scope' => 'issue', 'key' => '666'])
+            ->assertRedirect(route('admin.files').'#issue-666')
+            ->assertSessionHas('status', 'Removed Hachayol #666 · Parshas Noach from the site. You can restore it here.');
+
+        foreach (['teach@example.org', 'hq@example.org'] as $who) {   // gone for everyone, HQ admin too
+            $html = $this->pageAs($who);
+            $this->assertStringNotContainsString('hachayolbar', $html);
+            $this->assertStringNotContainsString('data-go="i666orders"', $html);
+            $this->assertStringNotContainsString('data-go="i666rebbe"', $html);
+            $this->asPerson($who)->getJson('/api/content/pages/i666orders')->assertNotFound();
+            $this->asPerson($who)->getJson('/api/content/pages/i666rebbe')->assertNotFound();
+            $this->asPerson($who)->getJson('/api/content/bar?href=pdfs/666.pdf')->assertStatus(403);
+        }
+        $this->assertStringContainsString('pdfs/i667orders.pdf', $this->partAs('i667orders', 'teach@example.org'), 'other weeks stay');
+        $this->assertStringNotContainsString('i666', json_encode($this->asPerson('teach@example.org')->getJson('/api/content/search?q=Title')->json()));
+        $this->assertSame(4, PageBlock::count(), 'page text is not deleted');
+
+        $admin = $this->actingAs($this->admin)->get(route('admin.files'))->getContent();
+        $this->assertStringContainsString('Removed from the site', $admin);
+        $this->assertStringContainsString('>Restore</button>', $admin);
+    }
+
+    public function test_removing_a_whole_feature_takes_every_week_of_it_off_the_site(): void
+    {
+        $this->weeklyParts();
+        $this->removeScope(['scope' => 'feature', 'key' => 'orders'])
+            ->assertRedirect(route('admin.files').'#feature-orders')
+            ->assertSessionHas('status', 'Removed Orders from Our General (all weeks) from the site. You can restore it here.');
+
+        foreach (['teach@example.org', 'hq@example.org'] as $who) {
+            $this->asPerson($who)->getJson('/api/content/pages/i666orders')->assertNotFound();
+            $this->asPerson($who)->getJson('/api/content/pages/i667orders')->assertNotFound();
+            $html = $this->pageAs($who);
+            $this->assertStringNotContainsString('data-go="i666orders"', $html);
+            $this->assertStringContainsString('data-go="i666rebbe"', $html);
+            $this->assertStringContainsString('hachayolbar', $html);
+        }
+        $this->partAs('i666rebbe', 'teach@example.org');
+    }
+
+    public function test_removing_a_feature_in_one_hachayol_takes_only_that_week_off_the_site(): void
+    {
+        $this->weeklyParts();
+        $this->removeScope(['scope' => 'part', 'key' => 'i666orders'])
+            ->assertRedirect(route('admin.files').'#part-i666orders')
+            ->assertSessionHas('status', 'Removed Orders from Our General · Hachayol #666 · Parshas Noach from the site. You can restore it here.');
+
+        $this->asPerson('hq@example.org')->getJson('/api/content/pages/i666orders')->assertNotFound();
+        $this->assertStringNotContainsString('data-go="i666orders"', $this->pageAs('teach@example.org'));
+        $this->assertStringContainsString('pdfs/i667orders.pdf', $this->partAs('i667orders', 'teach@example.org'));
+        $this->assertStringContainsString('pdfs/i666rebbe.pdf', $this->partAs('i666rebbe', 'teach@example.org'));
+    }
+
+    public function test_a_removed_feature_files_are_refused_by_the_server_too(): void
+    {
+        $this->weeklyParts();
+        $site = Site::where('slug', 'resources')->firstOrFail();
+        Storage::disk('public')->put('uploads/x.pdf', '%PDF');
+        $upload = Upload::create(['site_id' => $site->id, 'original_name' => 'x.pdf', 'stored_path' => 'uploads/x.pdf', 'size' => 4, 'mime_type' => 'application/pdf', 'page_key' => 'i666orders', 'uploaded_by' => $this->admin->id]);
+        foreach (['hq_staff', 'teacher', 'base', 'news'] as $role) {
+            $upload->permissions()->create(['role' => $role, 'mode' => 'always']);
+        }
+        $this->asPerson('teach@example.org')->getJson('/api/content/files/'.$upload->id)->assertOk();
+
+        $this->removeScope(['scope' => 'feature', 'key' => 'orders'])->assertRedirect();
+        $this->asPerson('teach@example.org')->getJson('/api/content/files/'.$upload->id)->assertStatus(403);
+        $this->assertTrue(Storage::disk('public')->exists('uploads/x.pdf'), 'the file stays on the server');
+    }
+
+    public function test_restore_brings_it_back_with_its_settings(): void
+    {
+        $this->weeklyParts();
+        $this->saveScope(['scope' => 'issue', 'key' => '666', 'roles' => ['hq_staff']])->assertRedirect();
+        $this->removeScope(['scope' => 'issue', 'key' => '666'])->assertRedirect();
+        $this->removeScope(['scope' => 'feature', 'key' => 'rebbe'])->assertRedirect();
+        $this->assertStringNotContainsString('hachayolbar', $this->pageAs('staff@example.org'));
+
+        $this->removeScope(['scope' => 'issue', 'key' => '666'], 'admin.files.restore')
+            ->assertRedirect(route('admin.files').'#issue-666')->assertSessionHas('status', 'Restored Hachayol #666 · Parshas Noach.');
+        $this->removeScope(['scope' => 'feature', 'key' => 'rebbe'], 'admin.files.restore')->assertRedirect();
+
+        $this->assertStringContainsString('hachayolbar', $this->pageAs('staff@example.org'));
+        $this->assertStringNotContainsString('hachayolbar', $this->pageAs('teach@example.org'), 'who can see is kept');
+        $this->assertSame(['hq_staff'], FileScopeRule::where('scope', 'issue')->first()->roles);
+        $this->assertSame(0, FileScopeRule::where('scope', 'feature')->count(), 'nothing left to keep');
+        $this->partAs('i666rebbe', 'staff@example.org');
+    }
+
+    public function test_a_single_file_can_be_removed_from_the_files_page_search(): void
+    {
+        $html = $this->actingAs($this->admin)->get(route('admin.files', ['q' => 'story.pdf']))->getContent();
+        $this->assertStringContainsString('class="fx-rm"', $html);
+
+        $this->actingAs($this->admin)->from(route('admin.files', ['q' => 'story.pdf']))
+            ->post(route('admin.pages.block.files.remove', [$this->page, $this->block]), ['ref' => 'link:guides/story.pdf'])
+            ->assertRedirect()->assertSessionHas('status');
+        $this->assertStringNotContainsString('guides/story.pdf', $this->pageAs('hq@example.org'));
+
+        $html = $this->actingAs($this->admin)->get(route('admin.files', ['q' => 'story.pdf']))->getContent();
+        $this->assertStringContainsString('>Restore</button>', $html);
+        $this->assertStringContainsString('fx-pill removed', $html);
+    }
+
     private function importedPdf(): Upload
     {
         $site = Site::where('slug', 'resources')->firstOrFail();

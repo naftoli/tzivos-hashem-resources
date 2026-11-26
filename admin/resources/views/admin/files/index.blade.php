@@ -47,6 +47,17 @@
         .fx-pill.everyone { background: var(--fx-on-soft); color: var(--fx-on-ink); }
         .fx-pill.limited { background: #fff4de; color: #b26b00; }
         .fx-pill.muted { background: #f1f2f6; color: #7e8299; }
+        .fx-pill.removed { background: #fdecec; color: #c62828; }
+
+        /* remove / restore */
+        .fx-rm-form { display: inline-flex; margin: 0; }
+        .fx-rm { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border-radius: 8px; border: 1px solid #f3c1c1; background: #fff; color: #d14343; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; transition: background .15s, border-color .15s, color .15s; }
+        .fx-rm svg { width: 14px; height: 14px; }
+        .fx-rm:hover { background: #fdecec; border-color: #e5484d; color: #b42318; }
+        .fx-rm.restore { border-color: #b7e4dd; color: var(--fx-on-ink); }
+        .fx-rm.restore:hover { background: var(--fx-on-soft); border-color: var(--fx-on); color: var(--fx-on-ink); }
+        .fx-item.is-removed { border-color: #f3c1c1; }
+        .fx-item.is-removed .fx-item-body { opacity: .55; }
 
         /* issue / feature cards */
         .fx-list { display: flex; flex-direction: column; gap: 16px; }
@@ -95,6 +106,7 @@
         .found { margin-top: 14px; }
         .found td { vertical-align: top; }
         .fname { font-weight: 600; color: var(--fx-ink); }
+        .fx-acts { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
         .fsub { color: #7e8299; font-size: 12px; margin-top: 3px; }
         @media (max-width: 1100px) { .fx-grid2 { grid-template-columns: 1fr; } }
         @media (max-width: 700px) { .fx-meta { margin-left: 0; } .fx-hero { padding: 20px; } }
@@ -119,7 +131,7 @@
             <div class="fx-hero-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="2.2"/><path d="M7.5 13s1.8-3.2 4.5-3.2 4.5 3.2 4.5 3.2-1.8 3.2-4.5 3.2-4.5-3.2-4.5-3.2z"/></svg></div>
             <div>
                 <h1>Files</h1>
-                <p class="fx-hero-lead">Set who can see each Hachayol, each feature, and each single file on the site, and when. This only changes what the site shows. No file is deleted from the server.</p>
+                <p class="fx-hero-lead">Set who can see each Hachayol, each feature, and each single file on the site, and when. This only changes what the site shows. Remove takes a box off the site (Restore brings it back). No file is deleted from the server.</p>
             </div>
         </div>
         <details class="fx-help">
@@ -150,12 +162,15 @@
             <div class="fx-section-head"><h2>Whole feature (all weeks)</h2></div>
             <div class="fx-grid2">
             @forelse ($features as $key => $feature)
-                @php $rule = $rules['feature:'.$key] ?? null; @endphp
-                <div class="fx-item" id="feature-{{ $key }}">
+                @php $rule = $rules['feature:'.$key] ?? null; $gone = (bool) $rule?->removed; @endphp
+                <div class="fx-item {{ $gone ? 'is-removed' : '' }}" id="feature-{{ $key }}">
                     <div class="fx-item-head">
                         <span class="sw-ico">{!! $svgDoc !!}</span>
                         <div class="fx-title"><span class="fname">{{ $feature['name'] }}</span><span class="fsub">{{ $feature['weeks'] }} week(s)</span></div>
-                        <div class="fx-meta">@if ($rule)<span class="fx-pill limited">Limited</span>@else<span class="fx-pill everyone">Everyone</span>@endif</div>
+                        <div class="fx-meta">
+                            @if ($gone)<span class="fx-pill removed">Removed from the site</span>@elseif ($rule)<span class="fx-pill limited">Limited</span>@else<span class="fx-pill everyone">Everyone</span>@endif
+                            @include('admin.files._remove', ['action' => route('admin.files.remove'), 'restore' => route('admin.files.restore'), 'removed' => $gone, 'name' => $feature['name'].' (all weeks)', 'fields' => ['scope' => 'feature', 'key' => $key]])
+                        </div>
                     </div>
                     <form method="POST" action="{{ route('admin.files.update') }}" class="fx-item-body">
                         @csrf
@@ -176,14 +191,15 @@
         <div class="fx-section-head"><h2>Whole Hachayol</h2><span class="fx-badge">{{ count($issues) }} issue(s)</span></div>
         <div class="fx-list">
         @forelse ($issues as $issue)
-            @php $rule = $rules['issue:'.$issue['num']] ?? null; @endphp
-            <div class="fx-item" id="issue-{{ $issue['num'] }}">
+            @php $rule = $rules['issue:'.$issue['num']] ?? null; $gone = (bool) $rule?->removed; @endphp
+            <div class="fx-item {{ $gone ? 'is-removed' : '' }}" id="issue-{{ $issue['num'] }}">
                 <div class="fx-item-head">
                     <span class="fx-num">#{{ $issue['num'] }}</span>
                     <div class="fx-title"><span class="fname">{{ $issue['label'] }}</span></div>
                     <div class="fx-meta">
-                        @if ($rule)<span class="fx-pill limited">Limited</span>@else<span class="fx-pill everyone">Everyone</span>@endif
+                        @if ($gone)<span class="fx-pill removed">Removed from the site</span>@elseif ($rule)<span class="fx-pill limited">Limited</span>@else<span class="fx-pill everyone">Everyone</span>@endif
                         @if ($issue['bar'])<span class="fx-chip">{!! $svgDoc !!}<code>{{ rawurldecode($issue['bar']['href']) }}</code></span>@endif
+                        @include('admin.files._remove', ['action' => route('admin.files.remove'), 'restore' => route('admin.files.restore'), 'removed' => $gone, 'name' => $issue['label'], 'fields' => ['scope' => 'issue', 'key' => $issue['num']]])
                     </div>
                 </div>
                 <form method="POST" action="{{ route('admin.files.update') }}" class="fx-item-body">
@@ -198,8 +214,8 @@
                         <summary><span class="fx-caret">{!! $svgCaret !!}</span> Features in this Hachayol <span class="fx-badge">{{ count($issue['parts']) }}</span></summary>
                         <div class="fparts">
                         @foreach ($issue['parts'] as $part)
-                            @php $prule = $rules['part:'.$part['key']] ?? null; @endphp
-                            <div class="fx-item" id="part-{{ $part['key'] }}">
+                            @php $prule = $rules['part:'.$part['key']] ?? null; $pgone = (bool) $prule?->removed; $pname = $features[$part['feature']]['name'].' · '.$issue['label']; @endphp
+                            <div class="fx-item {{ $pgone ? 'is-removed' : '' }}" id="part-{{ $part['key'] }}">
                                 <div class="fx-item-head">
                                     <span class="sw-ico">{!! $svgDoc !!}</span>
                                     <div class="fx-title">
@@ -207,8 +223,9 @@
                                         <span class="fsub">{{ $part['title'] }}</span>
                                     </div>
                                     <div class="fx-meta">
-                                        @if ($prule)<span class="fx-pill limited">Own setting</span>@else<span class="fx-pill muted">Uses the broader settings</span>@endif
+                                        @if ($pgone)<span class="fx-pill removed">Removed from the site</span>@elseif ($prule)<span class="fx-pill limited">Own setting</span>@else<span class="fx-pill muted">Uses the broader settings</span>@endif
                                         <a class="fx-link" href="{{ route('admin.pages.block.files', [$part['block']->page, $part['block']]) }}">Single files →</a>
+                                        @include('admin.files._remove', ['action' => route('admin.files.remove'), 'restore' => route('admin.files.restore'), 'removed' => $pgone, 'name' => $pname, 'fields' => ['scope' => 'part', 'key' => $part['key']]])
                                     </div>
                                 </div>
                                 <form method="POST" action="{{ route('admin.files.update') }}" class="fx-item-body">
@@ -257,7 +274,11 @@
                             <tr class="row">
                                 <td><div class="fname">{{ $row['file']['label'] !== '' ? $row['file']['label'] : basename($row['file']['path']) }}</div><div class="fsub">{{ $row['file']['kind'] === 'image' ? 'Picture' : $row['file']['path'] }}</div></td>
                                 <td>{{ $row['block']->page->slug }} / {{ $row['block']->block_key }}</td>
-                                <td class="acts"><a class="btn light" href="{{ route('admin.pages.block.files', [$row['block']->page, $row['block']]) }}">Open</a></td>
+                                <td class="acts"><div class="fx-acts">
+                                    @if ($row['removed'])<span class="fx-pill removed">Removed</span>@endif
+                                    <a class="btn light" href="{{ route('admin.pages.block.files', [$row['block']->page, $row['block']]) }}">Open</a>
+                                    @include('admin.files._remove', ['action' => route('admin.pages.block.files.remove', [$row['block']->page, $row['block']]), 'restore' => route('admin.pages.block.files.restore', [$row['block']->page, $row['block']]), 'removed' => $row['removed'], 'name' => $row['file']['label'] !== '' ? $row['file']['label'] : basename($row['file']['path']), 'fields' => ['ref' => $row['file']['ref']]])
+                                </div></td>
                             </tr>
                         @empty
                             <tr><td colspan="3" class="empty">Nothing found.</td></tr>
@@ -271,6 +292,9 @@
 
     <script>
     (function () {
+        // Remove: ask first, so nobody removes by accident
+        document.querySelectorAll('form[data-confirm]').forEach(f => f.addEventListener('submit', e => { if (!confirm(f.dataset.confirm)) e.preventDefault(); }));
+
         // Tabs: Full and features / Whole Hachayol. Stays on the same tab after Save (and on a link to something inside a tab).
         const tabs = document.querySelectorAll('.fx-tab');
         const panels = document.querySelectorAll('.fx-panel');

@@ -12,7 +12,7 @@ use Illuminate\Support\Collection;
  *   one feature in one week (e.g. i666orders)  wins over
  *   the whole Hachayol issue (666) and the whole feature (orders); when both of those are set, a person must pass both.
  * A setting on a single file (Site pages › Files) wins over all of these for that file.
- * A switch turned off (Full, a week, a feature) wins over everything and hides it for everyone.
+ * A switch turned off (Full, a week, a feature), or Remove on the Files page, wins over everything and hides it for everyone.
  */
 class FileScopes
 {
@@ -40,12 +40,25 @@ class FileScopes
     {
         $p = self::partOf($blockKey);
 
-        return $p !== null && $this->switches !== null && $this->switches->partIsOff($p[0], $p[1]);
+        return $p !== null && ($this->partIsRemoved($blockKey) || ($this->switches !== null && $this->switches->partIsOff($p[0], $p[1])));
     }
 
     public function issueIsOff(string $num): bool
     {
-        return $this->switches !== null && $this->switches->issueIsOff($num);
+        return $this->isRemoved('issue', $num) || ($this->switches !== null && $this->switches->issueIsOff($num));
+    }
+
+    /** Files page › Remove: this feature in this week, its whole Hachayol, or the whole feature was removed from the site */
+    public function partIsRemoved(string $blockKey): bool
+    {
+        $p = self::partOf($blockKey);
+
+        return $p !== null && ($this->isRemoved('part', $blockKey) || $this->isRemoved('issue', $p[0]) || $this->isRemoved('feature', $p[1]));
+    }
+
+    public function isRemoved(string $scope, string $key): bool
+    {
+        return (bool) $this->rule($scope, $key)?->removed;
     }
 
     /** "i666orders" => ['666', 'orders']; not a weekly feature => null */

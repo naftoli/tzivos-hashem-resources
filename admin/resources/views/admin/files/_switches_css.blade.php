@@ -87,3 +87,6 @@
         }
         .sw-panel > .btn { background: var(--fx-navy); border-radius: 8px; height: 36px; }
         .sw-panel > .btn:hover { background: #262b52; }
+
+.sw-card-foot { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 0; padding-top: 10px; border-top: 1px solid #f0f1f6; }
+.sw-card-foot .fx-pill { margin-right: auto; }

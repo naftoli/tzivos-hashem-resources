@@ -12,7 +12,7 @@ class FileScopeRule extends Model
 
     public const SCOPES = ['issue', 'feature', 'part'];
 
-    protected $fillable = ['site_id', 'scope', 'scope_key', 'roles', 'download_roles', 'starts_at', 'ends_at', 'updated_by'];
+    protected $fillable = ['site_id', 'scope', 'scope_key', 'removed', 'roles', 'download_roles', 'starts_at', 'ends_at', 'updated_by'];
 
-    protected $casts = ['roles' => 'array', 'download_roles' => 'array', 'starts_at' => 'datetime', 'ends_at' => 'datetime'];
+    protected $casts = ['removed' => 'boolean', 'roles' => 'array', 'download_roles' => 'array', 'starts_at' => 'datetime', 'ends_at' => 'datetime'];
 }

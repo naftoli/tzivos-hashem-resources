@@ -39,12 +39,12 @@ class ContentController extends Controller
             ->where('block_key', $pageId)
             ->orderBy('position')
             ->first();
-        if (! $block) {
+        $scopes = FileScopes::load($site->id);
+        if (! $block || $scopes->partIsRemoved($block->block_key)) {   // removed on the Files page: gone from the site
             return response()->json(['message' => 'No page with that name.'], 404);
         }
 
         $uploads = $this->uploads($site->id);
-        $scopes = FileScopes::load($site->id);
         $html = PageFiles::apply($block->html, $block->fileRules()->get(), $viewer->role, $scopes, $block->block_key);
         $html = $this->links->rewrite($html, $uploads, $viewer->role);
         $html = PageFiles::viewLinks($html, rtrim((string) config('admin.site_api'), '?'));
@@ -74,7 +74,11 @@ class ContentController extends Controller
         $needle = mb_strtolower($q);
         $results = [];
 
+        $scopes = FileScopes::load($site->id);
         foreach (PageBlock::query()->where('site_id', $site->id)->orderBy('position')->get(['block_key', 'html']) as $block) {
+            if ($scopes->partIsRemoved($block->block_key)) {
+                continue;
+            }
             $title = $this->title($block->html, $block->block_key);
             $text = mb_strtolower(trim(preg_replace('/\s+/u', ' ', strip_tags($block->html)) ?? ''));
             $inTitle = mb_stripos($title, $q) !== false;
@@ -171,6 +175,9 @@ class ContentController extends Controller
                     continue;
                 }
                 $found = true;
+                if ($bar['issue'] !== null && $scopes->issueIsOff($bar['issue'])) {   // switched off, or removed on the Files page
+                    return response()->json(['message' => "You don't have access to this file right now."], 403);
+                }
                 $own = PageFileRule::where('page_block_id', $block->id)->where('ref', 'link:'.$bar['href'])->first();
                 $rule = $own ?? ($bar['issue'] !== null ? $scopes->forIssue($bar['issue']) : null);
                 if ($rule && ! $rule->visibleToRole($viewer->role)) {
