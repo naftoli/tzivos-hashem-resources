@@ -31,7 +31,7 @@
             @if ($canAsk)
                 <div style="margin-top:16px">
                     @if ($pendingMine)
-                        <p style="margin:0">Your request for HQ admin was sent. An HQ admin will review it.</p>
+                        <p style="margin:0">Your request for HQ admin was sent. The Owner will review it.</p>
                     @else
                         <form method="POST" action="{{ route('account.request-admin') }}" style="margin:0">
                             @csrf

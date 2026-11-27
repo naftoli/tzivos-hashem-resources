@@ -9,7 +9,7 @@
         $mapper = app(\App\Services\MashpiaRoleMapper::class);
         $canAsk = $mapper->canRequestAdmin($u);
         $pendingMine = $canAsk ? $mapper->pendingRequest($u) : null;
-        $pendingCount = $u->isHQAdmin() ? \App\Models\AdminAccessRequest::where('status', 'pending')->count() : 0;
+        $pendingCount = $u->isOwner() ? \App\Models\AdminAccessRequest::where('status', 'pending')->count() : 0;
     @endphp
     @push('head')
         <style>
@@ -40,7 +40,7 @@
             <div class="card-head"><h2>HQ admin access</h2></div>
             <div class="card-body">
                 @if ($pendingMine)
-                    <p style="margin:0">Your request was sent. An HQ admin will review it.</p>
+                    <p style="margin:0">Your request was sent. The Owner will review it.</p>
                 @else
                     <p style="margin:0 0 12px">Your Mashpia role is {{ $u->mashpia_role ?: 'Headquarters' }}. On this site that starts you as HQ staff. An existing HQ admin can make you an HQ admin, or you can ask here.</p>
                     <form method="POST" action="{{ route('account.request-admin') }}" style="margin:0">
@@ -87,11 +87,13 @@
                 <h3>User roles</h3>
                 <p>{{ \App\Models\User::count() }} users</p>
             </a>
-            <a class="tile" href="{{ route('admin.admin-requests') }}">
-                <div class="ic" style="background:#fff4de;color:#ffa800"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 15l2 2 4-4"/></svg></div>
-                <h3>Admin requests</h3>
-                <p>{{ $pendingCount }} waiting</p>
-            </a>
+            @if ($u->isOwner())
+                <a class="tile" href="{{ route('admin.admin-requests') }}">
+                    <div class="ic" style="background:#fff4de;color:#ffa800"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 15l2 2 4-4"/></svg></div>
+                    <h3>Admin requests</h3>
+                    <p>{{ $pendingCount }} waiting</p>
+                </a>
+            @endif
             <a class="tile" href="{{ route('admin.login-settings') }}">
                 <div class="ic" style="background:#fff4de;color:#ffa800"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
                 <h3>Sign-in settings</h3>

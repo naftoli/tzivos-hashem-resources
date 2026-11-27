@@ -25,12 +25,12 @@ class AdminAccessRequestController extends Controller
             return back()->withErrors(['request' => "Your Mashpia role doesn't include asking for HQ admin."]);
         }
         if ($mapper->pendingRequest($user)) {
-            return back()->with('status', 'Your request was already sent. An HQ admin will review it.');
+            return back()->with('status', 'Your request was already sent. The Owner will review it.');
         }
 
         AdminAccessRequest::create(['user_id' => $user->id, 'status' => 'pending']);
 
-        return back()->with('status', 'Your request was sent. An HQ admin will review it.');
+        return back()->with('status', 'Your request was sent. The Owner will review it.');
     }
 
     public function approve(Request $request, AdminAccessRequest $accessRequest)

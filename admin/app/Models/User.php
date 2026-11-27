@@ -74,6 +74,21 @@ class User extends Authenticatable
         return $this->isOwnerByEmail() || (bool) $this->is_owner;
     }
 
+    /**
+     * May this Owner take the Owner flag off $other?
+     * An Owner from the server settings (ADMIN_OWNER_EMAILS) can't be removed by anyone.
+     * Another Owner can be removed by an Owner from the server settings, or by the Owner who made them an Owner.
+     * So an Owner you add can never remove you.
+     */
+    public function canRemoveOwner(self $other): bool
+    {
+        if (! $this->isOwner() || ! $other->isOwner() || $other->is($this) || $other->isOwnerByEmail()) {
+            return false;
+        }
+
+        return $this->isOwnerByEmail() || ($other->owner_by !== null && (int) $other->owner_by === (int) $this->id);
+    }
+
     public static function ownerCount(): int
     {
         return static::query()->get()->filter(fn (self $user) => $user->isOwner())->count();
