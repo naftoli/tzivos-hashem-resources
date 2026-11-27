@@ -75,6 +75,13 @@
             </a>
         @endif
         @if ($u->isHQAdmin())
+            <a class="tile" href="{{ route('admin.files') }}">
+                <div class="ic" style="background:#e1f0ff;color:#3699ff"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></div>
+                <h3>Files</h3>
+                <p>Who can see what, and when</p>
+            </a>
+        @endif
+        @if ($u->isHQAdmin())
             <a class="tile" href="{{ route('admin.roles') }}">
                 <div class="ic" style="background:#eee5ff;color:#8950fc"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
                 <h3>User roles</h3>
