@@ -184,7 +184,7 @@ class FileDashboardController extends Controller
             $issues[$num]['parts'][$b->block_key] = ['key' => $b->block_key, 'feature' => $feat, 'title' => $b->heading(), 'block' => $b];
         }
         // Picture-only Hachayol sections on the week pages (e.g. Tanya Baal Peh): a switch of their own, even if only in one week
-        $picBlocks = PageBlock::with('page')->where('site_id', $siteId)->where('html', 'like', '%class="card tp-lb"%')->get();
+        $picBlocks = PageBlock::with('page')->where('site_id', $siteId)->where(fn ($q) => $q->where('html', 'like', '%class="card tp-lb"%')->orWhere('html', 'like', '%class="card sect-wait"%'))->get();
         foreach ($picBlocks as $b) {
             foreach (\App\Support\PictureCards::all($b->html) as $c) {
                 [$num, $feat] = [$c['issue'], $c['key']];

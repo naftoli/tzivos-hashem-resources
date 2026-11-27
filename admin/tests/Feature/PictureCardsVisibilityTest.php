@@ -55,7 +55,9 @@ class PictureCardsVisibilityTest extends TestCase
                 $cards[$c['part']] = $c['name'];
             }
         }
-        $this->assertCount(28, $cards);
+        $this->assertCount(32, $cards);   // 28 picture cards and 4 "Pages coming soon" cards
+        $this->assertSame('Auction Ad', $cards['i665auctionad']);
+        $this->assertSame('Sales', $cards['i669sales']);
         $this->assertSame('Tanya Baal Peh', $cards['i672tanyabaalpeh']);
         $this->assertSame('Siyum Horambam Around the World', $cards['i676siyumhorambamaroundtheworld']);
         $this->assertSame('Conversations on the Inside', $cards['i681conversationsontheinside']);
@@ -72,7 +74,7 @@ class PictureCardsVisibilityTest extends TestCase
         $page->assertSee('id="part-i672tanyabaalpeh"', false);   // also under Features in this Hachayol
 
         $weeks = collect($this->switches()['weeks'])->filter(fn ($w) => in_array('yomtovliving', $w['features'], true))->pluck('id')->sort()->values()->all();
-        $this->assertSame(['661', '662', '663', '673', '675', '676', '680'], $weeks);   // Yom Tov pages too
+        $this->assertSame(['661', '662', '663', '664', '673', '675', '676', '680'], $weeks);   // Yom Tov pages too
     }
 
     public function test_full_off_hides_every_hachayol_card_including_picture_cards(): void
