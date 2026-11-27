@@ -200,7 +200,7 @@ class MashpiaRoleMappingTest extends TestCase
         $this->actingAs($asker)->post(route('account.request-admin'))->assertRedirect();
         $this->assertDatabaseHas('admin_access_requests', ['user_id' => $asker->id, 'status' => 'pending']);
 
-        $admin = $this->hqAdmin();
+        $admin = User::factory()->create(['email' => 'owner-approves@example.org', 'role' => 'hq_admin', 'is_owner' => true]);   // Admin requests: Owner only
         $req = AdminAccessRequest::where('user_id', $asker->id)->first();
         $this->actingAs($admin)->post(route('admin.admin-requests.approve', $req))->assertRedirect(route('admin.admin-requests'));
         $fresh = $asker->fresh();

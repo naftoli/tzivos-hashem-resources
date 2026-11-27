@@ -48,9 +48,12 @@ Route::middleware('auth')->group(function () {
         Route::post('/admin/mashpia-roles', [MashpiaRoleMapController::class, 'store'])->name('admin.mashpia-roles.store');
         Route::put('/admin/mashpia-roles/{map}', [MashpiaRoleMapController::class, 'update'])->name('admin.mashpia-roles.update');
         Route::delete('/admin/mashpia-roles/{map}', [MashpiaRoleMapController::class, 'destroy'])->name('admin.mashpia-roles.destroy');
-        Route::get('/admin/admin-requests', [AdminAccessRequestController::class, 'index'])->name('admin.admin-requests');
-        Route::post('/admin/admin-requests/{accessRequest}/approve', [AdminAccessRequestController::class, 'approve'])->name('admin.admin-requests.approve');
-        Route::post('/admin/admin-requests/{accessRequest}/decline', [AdminAccessRequestController::class, 'decline'])->name('admin.admin-requests.decline');
+        // Admin requests: the Owner only
+        Route::middleware('owner')->group(function () {
+            Route::get('/admin/admin-requests', [AdminAccessRequestController::class, 'index'])->name('admin.admin-requests');
+            Route::post('/admin/admin-requests/{accessRequest}/approve', [AdminAccessRequestController::class, 'approve'])->name('admin.admin-requests.approve');
+            Route::post('/admin/admin-requests/{accessRequest}/decline', [AdminAccessRequestController::class, 'decline'])->name('admin.admin-requests.decline');
+        });
         Route::get('/admin/sites', [SiteController::class, 'index'])->name('admin.sites');
         Route::post('/admin/sites', [SiteController::class, 'store'])->name('admin.sites.store');
         Route::get('/admin/sites/{site}/edit', [SiteController::class, 'edit'])->name('admin.sites.edit');

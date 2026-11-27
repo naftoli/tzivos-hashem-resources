@@ -79,7 +79,7 @@ class AdminOnlyPagesTest extends TestCase
 
     public function test_hq_admin_can_open_admin_management_pages(): void
     {
-        $admin = User::factory()->create(['email' => 'hqadmin-pages@example.org', 'role' => 'hq_admin']);
+        $admin = User::factory()->create(['email' => 'hqadmin-pages@example.org', 'role' => 'hq_admin', 'is_owner' => true]);   // Admin requests: Owner only
         $this->actingAs($admin);
         foreach (self::ADMIN_PAGES as $name) {
             $this->get(route($name))->assertOk();

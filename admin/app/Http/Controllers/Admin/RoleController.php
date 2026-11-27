@@ -104,7 +104,7 @@ class RoleController extends Controller
             ->with('status', "{$user->email} is now " . $user->roleName() . ', from their Mashpia role. Mashpia login will keep it up to date.');
     }
 
-    /** Only an Owner can grant or remove the Owner flag. */
+    /** Only an Owner can grant or remove the Owner flag. An Owner can't be removed by an Owner they made. */
     public function setOwner(Request $request, User $user)
     {
         if (! $request->user()->isOwner()) {
@@ -123,8 +123,16 @@ class RoleController extends Controller
             return back()->withErrors(['role' => 'Nothing was changed: this Owner is set in the server settings, not from this page.']);
         }
 
+        if (! $makeOwner && $user->isOwner() && ! $request->user()->canRemoveOwner($user)) {
+            return back()->withErrors(['role' => "Nothing was changed: only the Owner who made {$user->email} an Owner can remove them."]);
+        }
+
         if ($makeOwner) {
+            if ($user->isOwner()) {
+                return redirect()->route('admin.roles')->with('status', "{$user->email} is already an Owner.");
+            }
             $user->is_owner = true;
+            $user->owner_by = $request->user()->id;   // who made them Owner: they (or a server-settings Owner) can remove them
             $user->role = 'hq_admin';
             $user->role_locked = true;
             $user->save();
@@ -134,6 +142,7 @@ class RoleController extends Controller
         }
 
         $user->is_owner = false;
+        $user->owner_by = null;
         $user->save();
 
         return redirect()->route('admin.roles')

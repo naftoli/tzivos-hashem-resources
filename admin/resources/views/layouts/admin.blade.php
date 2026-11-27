@@ -33,7 +33,9 @@
         $nav['Settings'][] = ['Sites', route('admin.sites'), 'sites', $is('admin.sites*')];
         $nav['Settings'][] = ['User roles', route('admin.roles'), 'roles', $is('admin.roles')];
         $nav['Settings'][] = ['Mashpia roles', route('admin.mashpia-roles'), 'map', $is('admin.mashpia-roles*')];
-        $nav['Settings'][] = ['Admin requests', route('admin.admin-requests'), 'requests', $is('admin.admin-requests*')];
+        if ($u->isOwner()) {
+            $nav['Settings'][] = ['Admin requests', route('admin.admin-requests'), 'requests', $is('admin.admin-requests*')];
+        }
         $nav['Settings'][] = ['Sign-in settings', route('admin.login-settings'), 'signin', $is('admin.login-settings')];
         $nav['Settings'][] = ['Stats', route('admin.stats'), 'stats', $is('admin.stats')];
     }

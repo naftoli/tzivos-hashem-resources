@@ -122,11 +122,13 @@
                             @endif
                             @if (auth()->user()->isOwner() && ! $user->is(auth()->user()))
                                 @if ($user->isOwner())
-                                    <form method="POST" action="{{ route('admin.roles.owner', $user) }}">
-                                        @csrf
-                                        <input type="hidden" name="owner" value="0">
-                                        <button type="submit" class="act text" title="Remove Owner">Remove Owner</button>
-                                    </form>
+                                    @if (auth()->user()->canRemoveOwner($user))
+                                        <form method="POST" action="{{ route('admin.roles.owner', $user) }}">
+                                            @csrf
+                                            <input type="hidden" name="owner" value="0">
+                                            <button type="submit" class="act text" title="Remove Owner">Remove Owner</button>
+                                        </form>
+                                    @endif
                                 @else
                                     <form method="POST" action="{{ route('admin.roles.owner', $user) }}">
                                         @csrf

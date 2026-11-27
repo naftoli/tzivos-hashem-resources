@@ -20,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
         });
         $middleware->alias([
             'hq' => \App\Http\Middleware\EnsureUserIsHQ::class,
+            'owner' => \App\Http\Middleware\EnsureUserIsOwner::class,
             'role' => \App\Http\Middleware\EnsureUserHasRole::class,
             'admin.site' => \App\Http\Middleware\EnsureUserCanAccessAdminSite::class,
         ]);
