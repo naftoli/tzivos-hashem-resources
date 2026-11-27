@@ -48,6 +48,7 @@ class ContentController extends Controller
         $html = PageFiles::apply($block->html, $block->fileRules()->get(), $viewer->role, $scopes, $block->block_key);
         $html = $this->links->rewrite($html, $uploads, $viewer->role);
         $html = PageFiles::viewLinks($html, rtrim((string) config('admin.site_api'), '?'));
+        $html = $this->liveCounts($html, $site->id, $viewer->role, $scopes);
         // a weekly feature this person may not see (Files dashboard): its uploads are not added either
         $part = $scopes->forPart($block->block_key);
         if (! $part || $part->visibleToRole($viewer->role)) {
@@ -56,6 +57,35 @@ class ContentController extends Controller
         ContentView::record($viewer, 'page', $this->title($html, $pageId), $pageId, null, $site->id);
 
         return response()->json(['id' => $pageId, 'html' => $html]);
+    }
+
+    /**
+     * The Parsha list says how many features each week has ("8 features"). Count what this person really sees
+     * on that week's page now (Full, the week, each feature's switch, Choose weeks, Remove, who can see): "0 available" when none.
+     * A week with no Hachayol yet stays blank; one added later (Upload Full Hachayols) gets its count too.
+     */
+    private function liveCounts(string $html, int $siteId, string $role, FileScopes $scopes): string
+    {
+        $pattern = '/(<button class="sc[^"]*" data-go="(dp[A-Za-z0-9]+)"><b>.*?<\/b><span>)(\d+ (?:features?|available)|)(<\/span>)/s';
+        if (! preg_match_all($pattern, $html, $all)) {
+            return $html;
+        }
+        $blocks = PageBlock::with('fileRules')->where('site_id', $siteId)->whereIn('block_key', array_unique($all[2]))->get()->keyBy('block_key');
+
+        return preg_replace_callback($pattern, function ($m) use ($blocks, $role, $scopes) {
+            $b = $blocks[$m[2]] ?? null;
+            $n = 0;
+            if ($b && ! $scopes->partIsRemoved($b->block_key)) {
+                $page = PageFiles::apply($b->html, $b->fileRules, $role, $scopes, $b->block_key);
+                $n = preg_match_all('/<button class="card[\s"]/', $page);
+            }
+
+            if ($m[3] === '' && $n === 0) {
+                return $m[0];   // a week with no Hachayol yet stays blank
+            }
+
+            return $m[1].($n === 0 ? '0 available' : $n.' '.($n === 1 ? 'feature' : 'features')).$m[4];
+        }, $html) ?? $html;
     }
 
     public function search(Request $request)

@@ -6,6 +6,7 @@ use App\Support\Hachayol\HachayolParser;
 
 /**
  * Picture-only cards on a week's Parsha page: a Hachayol section with no page of its own
+ * (and "Pages coming soon" cards: a section whose pages are not in yet)
  * (e.g. Tanya Baal Peh on #672). "Open" shows the magazine page pictures (data-lb).
  * Each one counts as a part of its Hachayol, like a feature page: "i672tanyabaalpeh" = issue 672, section "tanyabaalpeh",
  * so Full, the week switch, its own switch, Choose weeks, who can see and Remove all work on it.
@@ -13,15 +14,17 @@ use App\Support\Hachayol\HachayolParser;
  */
 class PictureCards
 {
-    public const PATTERN = '/<button class="card tp-lb"([^>]*)>(.*?)<\/button>/s';
+    /** A picture card (tp-lb), or a section whose pages are not in yet ("Pages coming soon", sect-wait) */
+    public const PATTERN = '/<button class="card (?:tp-lb|sect-wait)"([^>]*)>(.*?)<\/button>/s';
 
     /** @return list<array{html:string, part:string, issue:string, key:string, name:string, title:string}> the Hachayol picture cards in some HTML */
     public static function all(string $html): array
     {
         preg_match_all(self::PATTERN, $html, $all, PREG_SET_ORDER);
         $out = [];
+        $issue = self::pageIssue($html);
         foreach ($all as $m) {
-            if ($c = self::read($m[1], $m[2])) {
+            if ($c = self::read($m[1], $m[2], self::waiting($m[0]) ? $issue : null)) {
                 $out[] = $c + ['html' => $m[0]];
             }
         }
@@ -32,15 +35,17 @@ class PictureCards
     /** Take out the picture cards for which $keep(part) is false */
     public static function filter(string $html, callable $keep): string
     {
-        return preg_replace_callback(self::PATTERN, function ($m) use ($keep) {
-            $c = self::read($m[1], $m[2]);
+        $issue = self::pageIssue($html);
+
+        return preg_replace_callback(self::PATTERN, function ($m) use ($keep, $issue) {
+            $c = self::read($m[1], $m[2], self::waiting($m[0]) ? $issue : null);
 
             return $c && ! $keep($c['part']) ? '' : $m[0];
         }, $html) ?? $html;
     }
 
     /** One card: which Hachayol and which section it is, or null when it isn't from a Hachayol */
-    public static function read(string $attrs, string $inner): ?array
+    public static function read(string $attrs, string $inner, ?string $pageIssue = null): ?array
     {
         $name = self::text(preg_match('/<span class="ribbon[^"]*">(.*?)<\/span>/s', $inner, $r) ? $r[1] : '');
         $kick = self::text(preg_match('/<div class="kick">(.*?)<\/div>/s', $inner, $k) ? $k[1] : '');
@@ -50,12 +55,14 @@ class PictureCards
             return ['part' => $p[1], 'issue' => $pp[0], 'key' => $pp[1], 'name' => $name !== '' ? $name : $pp[1], 'title' => $title !== '' ? $title : $kick];
         }
         // the site's own cards: their pictures are pages of the magazine, e.g. data-lb="i672sect07_p1"
-        if (! preg_match('/\bdata-lb="i(\d+)sect\d+/', $attrs, $i)) {
+        // a "Pages coming soon" card has no pictures yet: it belongs to the Hachayol of the week page it is on
+        $num = preg_match('/\bdata-lb="i(\d+)sect\d+/', $attrs, $i) ? $i[1] : $pageIssue;
+        if ($num === null || $num === '') {
             return null;
         }
         $key = self::key($name, $kick);
 
-        return ['part' => 'i'.$i[1].$key, 'issue' => $i[1], 'key' => $key, 'name' => $name !== '' ? $name : $kick, 'title' => $title !== '' ? $title : $kick];
+        return ['part' => 'i'.$num.$key, 'issue' => $num, 'key' => $key, 'name' => $name !== '' ? $name : $kick, 'title' => $title !== '' ? $title : $kick];
     }
 
     /** The section's key: the feature with that name, or else its name in plain letters ("Tanya Baal Peh" => tanyabaalpeh) */
@@ -72,6 +79,21 @@ class PictureCards
         }
 
         return 'section'.substr(preg_replace('/[^a-z]/', '', md5($name.$kick)), 0, 6);
+    }
+
+    /** The Hachayol of a week page: its feature cards (data-go="i672orders") or its Hachayol bar (pdfs/672.pdf) */
+    public static function pageIssue(string $html): ?string
+    {
+        if (preg_match('/<button class="card" data-go="i(\d+)[a-z]+"/', $html, $m) || preg_match('/<a class="hachayolbar"[^>]*href="[^"]*?(\d+)\.pdf"/', $html, $m)) {
+            return $m[1];
+        }
+
+        return null;
+    }
+
+    private static function waiting(string $card): bool
+    {
+        return str_starts_with($card, '<button class="card sect-wait"');
     }
 
     private static function text(string $s): string
